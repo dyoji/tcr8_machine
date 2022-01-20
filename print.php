@@ -29,7 +29,7 @@
       // DEBUG
       // $nfse_content .= "\n".$_DADOS['SATPHP']['sevenbuilds']['proc_dir'];
       // $nfse_content .= "\n".$_DADOS['SATPHP']['sevenbuilds']['xml_dir'];
-      // END OF DEBUG s
+      // END OF DEBUG
       $fp = fopen($filepath_temp,"wb");
       fwrite($fp,$nfse_content);
       fclose($fp);
