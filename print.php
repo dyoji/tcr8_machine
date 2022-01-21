@@ -96,32 +96,7 @@
   	extract($GLOBALS);
   	$data = array();
   	try{
-      $title    = cfg['store']['label'];
-      $loja			= cfg['store']['razao'];
-      $local    = cfg['store']['local'];
-      $sigla    = cfg['store']['abr'];
-      $store_abr = cfg['store']['abr'];
-
-      $cnpj     = mask(cfg['store']['cnpj'],'##.###.###/####-##');
-      $address  = cfg['store']['logradouro'].', '.cfg['store']['numero'].' - '.cfg['store']['compl'];
-      $address2 = 'Bairro: '.cfg['store']['bairro'].' - '.cfg['store']['municipio'].' / '.cfg['store']['uf'];
-      $impressora_porta_padrao = (int)cfg['printer']['cupom']['port']; // Porta em que a impressora fica escutando por padrão
-
-  		$init  = $_PRINT['esc'] . $_PRINT['codeutf8'] . $_PRINT['melhoraQualidade'] . $_PRINT['diminuiLineSpace'];
-  		$cust_header  = $_PRINT['n_on'] . mb_str_pad($title,48," ",STR_PAD_BOTH) . $_PRINT['n_off'] . "\n";
-  		$cust_header .= $_PRINT['n_on'] . mb_str_pad("www.infinifashion.com.br",48," ",STR_PAD_BOTH) . $_PRINT['n_off'] ."\n";
-  		$cust_header .= $message . "\n";
-
-  		$cust_header .= $_PRINT['left'] . $address . "\n";
-  		$cust_header .= $_PRINT['left'] . $address2 . "\n";
-  		$cust_header .= $_PRINT['s_on'] . mb_str_pad($loja, 30) . mb_str_pad($cnpj, 18). $_PRINT['s_off'] . "\n";
-  		$cust_header .= $header;
-  		$cust_header .= $_PRINT['left'] . "\n";
-
-  		$cust_footer  = "\n";
-  		$cust_footer .= $footer;
-
-  		$impressao = $init . $cust_header . $body . $footer;
+  		$impressao = $init . $header . $body . $footer;
   		if($sys_body != '') $impressao .= $_PRINT['cortaParcial'] . $sys_header . $sys_body . $sys_footer;
   		$impressao .= $_PRINT['cortaTotal'];
 
@@ -197,13 +172,14 @@
       if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
       $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
       $_CUPOM = $_DADOS['cupom'];
-
+      $cust_header = $_CUPOM['cust_header'];
+      $cust_footer = $_CUPOM['cust_footer'];
       $header = $_CUPOM['header'];
       $body   = $_CUPOM['body'];
       $footer = $_CUPOM['footer'];
       // echo "$body<br>";
-      exec_print($header,'',$body,'',$footer,'');
-
+      // exec_print($header,'',$body,'',$footer,'');
+      exec_print($cust_header,'',$body,'',$cust_footer,'');
       $data['success'] = true;
       $data['close_all'] = false;
       $data['reload']    = false;
