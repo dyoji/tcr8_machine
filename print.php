@@ -226,6 +226,47 @@
     echo json_encode($data);
     exit;
   }
+  function mp4200_teste(){
+    $data = array();
+    extract($GLOBALS);
+    try{
+      // if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      // $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $header = $body = $footer = "";
+
+  		// $text = $_REQUEST['text'];
+      $text = "Este é um uma mensagem de Teste, significa que a impressora está conectada com o sistema de forma via PHP";
+  		$text = preg_split('/<br[^>]*>/i', $text);
+      $body .= "\n";
+      $body .= "\n";
+
+  		$body.= $_PRINT['tamanhoDuploOn'].$_PRINT['n_on'];
+
+  		foreach ($text as $linha) {
+  			$body .= wordwrap($linha, 48, "\n");
+  			$body .= "\n";
+  		}
+  		$body.= $_PRINT['tamanhoDuploOff'].$_PRINT['n_off'];
+
+  		$body .= "\n";
+  		$body .= "\n";
+
+      $data['print']   = exec_sprint($header,$body,$footer);
+
+
+      $data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = 'NFE via PHP Emitido';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
 
   function generate_sat(){
     $data = array();
