@@ -16,7 +16,7 @@
 
   require_once 'basic_dan_machine.php';
 
-  $view = true;
+  $view = false;
   if($view){
     $_PRINT = [
       'esc' => "<br><br>",
