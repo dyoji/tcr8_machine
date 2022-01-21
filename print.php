@@ -194,25 +194,15 @@
     $data = array();
     extract($GLOBALS);
     try{
-      // if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
-      // $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+      $_CUPOM = $_DADOS['cupom'];
 
-      $header = $body = $footer = "";
-
-  		$text = $_REQUEST['text'];
-  		$text = preg_split('/<br[^>]*>/i', $text);
-  		$body.= $_PRINT['tamanhoDuploOn'].$_PRINT['n_on'];
-  		foreach ($text as $linha) {
-  			$body .= wordwrap($linha, 48, "\n");
-  			$body .= "\n";
-  		}
-  		$body.= $_PRINT['tamanhoDuploOff'].$_PRINT['n_off'];
-
-  		$body .= "\n";
-  		$body .= "\n";
-
-      $data['print']   = exec_sprint($header,$body,$footer);
-
+      $header = $_CUPOM['header'];
+      $body   = $_CUPOM['body'];
+      $footer = $_CUPOM['footer'];
+      // echo "$body<br>";
+      exec_print($header,'',$body,'',$footer,'');
 
       $data['success'] = true;
       $data['close_all'] = false;
@@ -227,6 +217,7 @@
     exit;
   }
   function mp4200_teste(){
+    // http://localhost/tcr8_machine/print.php?action=mp4200_teste&ip=192.168.15.90&port=9100&text=teste
     $data = array();
     extract($GLOBALS);
     try{
