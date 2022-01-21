@@ -96,6 +96,8 @@
   	extract($GLOBALS);
   	$data = array();
   	try{
+      $init  = $esc . $codeutf8 . $melhoraQualidade . $diminuiLineSpace;
+
   		$impressao = $init . $header . $body . $footer;
   		if($sys_body != '') $impressao .= $_PRINT['cortaParcial'] . $sys_header . $sys_body . $sys_footer;
   		$impressao .= $_PRINT['cortaTotal'];
