@@ -87,33 +87,23 @@
     ];
   }
 
-  $impressora_endereco_na_rede = $_REQUEST['ip'];
-  $impressora_porta_padrao = $_REQUEST['port']; // Porta em que a impressora fica escutando por padrão
+  $impressora_endereco_na_rede = @$_REQUEST['ip'];
+  $impressora_porta_padrao = @$_REQUEST['port']; // Porta em que a impressora fica escutando por padrão
   // http://localhost/tcr8_machine/print.php?action=mp4200&ip=192.168.0.99&port=9100&text=oi
   // echo "$impressora_endereco_na_rede <br> $impressora_porta_padrao <br>";
 
-  function exec_print($header,$sys_header,$body,$sys_body,$footer='',$sys_footer = ''){
+  function exec_print($print){
   	extract($GLOBALS);
   	$data = array();
   	try{
-      $init      = $_PRINT['esc'] . $_PRINT['codeutf8'] . $_PRINT['melhoraQualidade'] . $_PRINT['diminuiLineSpace']  ;
+      $print = base64_decode($print);
+      $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+      if ($socket === false) throw new Exception( "socket_create() falha: motivo: " . socket_strerror(socket_last_error()) );
+      $result = socket_connect($socket, $impressora_endereco_na_rede, $impressora_porta_padrao);
+      if ($result === false) throw new Exception( "socket_connect() falha: motivo: ($result) " . socket_strerror(socket_last_error($socket)) );
 
-  		$impressao = $init . $header . $body . $footer;
-  		if($sys_body != '') $impressao .= $_PRINT['cortaParcial'] . $sys_header . $sys_body . $sys_footer;
-  		$impressao .= $_PRINT['cortaTotal'];
-
-  		if(!$view){
-  			$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-  			if ($socket === false) throw new Exception( "socket_create() falha: motivo: " . socket_strerror(socket_last_error()) );
-  			$result = socket_connect($socket, $impressora_endereco_na_rede, $impressora_porta_padrao);
-  			if ($result === false) throw new Exception( "socket_connect() falha: motivo: ($result) " . socket_strerror(socket_last_error($socket)) );
-
-  			socket_write($socket, $impressao, strlen($impressao));
-  			socket_close($socket);
-  		} else {
-  			$html_debug = "<div class='teste' style='width: 100%;margin: 0 auto;background:white'><pre>".$impressao."</pre></div>";
-  			$data['html'] = '<div style="margin: 0 auto;">' . $html_debug . '</div>';
-  		}
+      socket_write($socket, $print, strlen($print));
+      socket_close($socket);
 
   		$data['Result'] = 'OK';
       $data['success'] = true;
@@ -173,15 +163,8 @@
     try{
       if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
       $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
-      $_CUPOM = $_DADOS['cupom'];
-      $cust_header = $_CUPOM['cust_header'];
-      $cust_footer = $_CUPOM['cust_footer'];
-      $header = $_CUPOM['header'];
-      $body   = $_CUPOM['body'];
-      $footer = $_CUPOM['footer'];
-      // echo "$body<br>";
-      // exec_print($header,'',$body,'',$footer,'');
-      exec_print($cust_header,'',$body,'',$cust_footer,'');
+      $_CUPOM = $_DADOS['print']['cupom'];
+      exec_print($_CUPOM['print']);
       $data['success'] = true;
       $data['close_all'] = false;
       $data['reload']    = false;
@@ -195,7 +178,7 @@
     exit;
   }
   function mp4200_teste(){
-    // http://localhost/tcr8_machine/print.php?action=mp4200_teste&ip=192.168.15.90&port=9100&text=teste
+    // http://10.19.31.190/tcr8_machine/print.php?action=mp4200_teste&ip=10.19.31.197&port=9100&text=teste
     $data = array();
     extract($GLOBALS);
     try{
