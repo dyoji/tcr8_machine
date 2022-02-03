@@ -348,7 +348,7 @@
       $data['reload']    = false;
   	} catch (Exception $e){
   	  $data['success'] = false;
-      $data['message'] = $ex->getMessage();
+      $data['message'] = $e->getMessage();
   	}
     $data['msg'] = $data['message'];
   	echo json_encode($data);
