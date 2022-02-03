@@ -269,6 +269,7 @@
       $cnpj = (isset( $_DADOS['cnpj'] ) ? $_DADOS['cnpj'] : false);
       if(!$cnpj) throw new \Exception("Existem campos necessário que não foram informados", 1);
 
+      $dirpath_xml = "{$_DADOS['SATPHP']['sevenbuilds']['xml_dir']}";
 
       $files = get_files_from_folder($dirpath_xml,'xml');
       if(count($files)>0){
@@ -287,7 +288,6 @@
 
           $filepath_temp = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/myText.temp";
           $filepath_txt = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/{$sale_id}.txt";
-          $dirpath_xml = "{$_DADOS['SATPHP']['sevenbuilds']['xml_dir']}";
 
           $xml_nfe     = json_decode(json_encode( (array) simplexml_load_file($file) ), 1);
           $date        = recursive_array_search('dEmi',$xml_nfe);
