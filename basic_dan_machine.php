@@ -68,6 +68,13 @@
       }
   }
 
+  function array_get_by_array($arr,$fetch){
+    foreach ($fetch as $key => $value) {
+      $arr = $arr[$value];
+    }
+    return $arr;
+  }
+
   function get_files_from_folder($dir,$ext='*'){
     $cdir = scandir($dir);
     $return = array();
