@@ -258,6 +258,30 @@
   	echo json_encode($data);
   	exit;
   }
+
+  function get_files_from_folder($dir,$ext='*'){
+    $cdir = scandir($dir);
+    $return = array();
+    foreach ($cdir as $key => $value) {
+       if (!in_array($value,array(".",".."))) {
+          if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
+            //é Diretório, não faz nada;
+             // $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
+          } else {
+            $file_parts = pathinfo($value);
+            $basename  = $file_parts['basename'];
+            $filename  = $file_parts['filename'];
+            $extension = $file_parts['extension'];
+            $dirname   = $file_parts['dirname'];
+            $fullpath = $dir."/".$value;
+            if($ext == '*') $return[] = $fullpath;
+            elseif ($ext == $extension) $return[] = $fullpath;
+          }
+       }
+    }
+    return $return;
+  }
+
   function organize_sat_locally(){
     $data = array();
   	try{
