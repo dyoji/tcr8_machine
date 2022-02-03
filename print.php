@@ -259,47 +259,6 @@
   	exit;
   }
 
-  function ftp_server_conn(){
-    $ftp_server    = 'tcr8.com.br';
-    $ftp_port      = '21';
-    $ftp_user_name = 'tcr8';
-    $ftp_user_pass = 'daniel1321';
-    $ftp_pasv      = true;
-    // $folder        = $data['proc_dir'] = cfg['SAT']['sevenbuilds']['proc_dir'];
-    // /tcr8.com.br/public_html/tcr8_local/nfe/sats/
-    // /tcr8.com.br/public_html/tcr8_local/nfe/24593673000160/files/SAT
-    $conn_id = ftp_connect($ftp_server,$ftp_port,10);
-    // $conn_id = ftp_connect($ftp_server);
-    $login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass);
-    ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
-    ftp_pasv($conn_id, $ftp_pasv);
-
-    return $conn_id;
-  }
-
-  function get_files_from_folder($dir,$ext='*'){
-    $cdir = scandir($dir);
-    $return = array();
-    foreach ($cdir as $key => $value) {
-       if (!in_array($value,array(".",".."))) {
-          if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
-            //é Diretório, não faz nada;
-             // $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
-          } else {
-            $file_parts = pathinfo($value);
-            $basename  = $file_parts['basename'];
-            $filename  = $file_parts['filename'];
-            $extension = $file_parts['extension'];
-            $dirname   = $file_parts['dirname'];
-            $fullpath = $dir."/".$value;
-            if($ext == '*') $return[] = $fullpath;
-            elseif ($ext == $extension) $return[] = $fullpath;
-          }
-       }
-    }
-    return $return;
-  }
-
   function organize_sat_locally(){
     $data = array();
   	try{
