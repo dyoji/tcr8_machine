@@ -346,9 +346,9 @@
   		$data['success'] = true;
       $data['close_all'] = false;
       $data['reload']    = false;
-      $data['message'] = 'NFE organizado via PHP';
   	} catch (Exception $e){
   	  $data['success'] = false;
+      $data['message'] = $ex->getMessage();
   	}
     $data['msg'] = $data['message'];
   	echo json_encode($data);
