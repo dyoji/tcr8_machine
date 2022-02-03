@@ -265,10 +265,11 @@
   		if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
   		$_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
       $cnpj = (isset( $_DADOS['cnpj'] ) ? $_DADOS['cnpj'] : false);
-      if(!$cnpj) throw new \Exception("Existem campos necessário que não foram informados", 1);
+      $sale_id = (isset( $_DADOS['sale_id'] ) ? $_DADOS['sale_id'] : false);
+      if(!$cnpj || !$sale_id) throw new \Exception("Existem campos necessário que não foram informados", 1);
 
       $filepath_temp = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/myText.temp";
-      $filepath_txt = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/{$_DADOS['nfe_filename']}";
+      $filepath_txt = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/{$sale_id}.txt";
       $dirpath_xml = "{$_DADOS['SATPHP']['sevenbuilds']['xml_dir']}";
 
       $files = get_files_from_folder($dirpath_xml,'xml');
@@ -305,6 +306,12 @@
             $xml_dir."/".$server_year_folder,
             $xml_dir."/".$server_move_folder,
           ];
+
+          if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
+            rename($file, $dirname."/".$server_move_folder."/".$basename);
+          } else {
+          }
+
           foreach ($paths as $key => $path) {
             if (!file_exists($path)){
                 $old = umask(0);
@@ -320,11 +327,14 @@
           $chave        = array_get_by_array($xml_nfe,$chave)['@attributes']['Id'];
           $chave        = preg_replace("/[^0-9]/","",$chave);
 
-          if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
-            rename($file, $dirname."/".$server_move_folder."/".$basename);
-          } else {
-          }
+          $data['Files'][] = array(
+            xml_path => $file, $dirname."/".$server_move_folder."/".$basename,
+            chave    => $chave,
+            sale_id  => $sale_id,
+          );
+
         }
+
         $data['message'] = 'NFE organizado via PHP';
 
       } else {
