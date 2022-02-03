@@ -277,7 +277,8 @@
       $files = get_files_from_folder($dirpath_xml,'xml');
       if(count($files)>0){
         $conn_id       =  ftp_server_conn();
-        $folder_xml    = "/tcr8.com.br/public_html/tcr8_local/nfe/$cnpj/files/SAT";
+        $xml_path_server = "/nfe/$cnpj/files/SAT/";
+        $folder_xml    = "/tcr8.com.br/public_html/tcr8_local".$xml_path_server;
         ftp_chdir($conn_id, $folder_xml);
         foreach ($files as $key => $file) {
           // if($key > 0) return;
@@ -304,43 +305,54 @@
           $server_month_folder = "01";
           $server_move_folder  = "1900/01";
 
-          $data['files'][] = array(
-            'file' => $file,
-            'rename' => "{$dirname}/{$server_move_folder}/{$basename}",
-          );
-
-          if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
-            rename($file, "{$dirname}/{$server_move_folder}/{$basename}");
-          } else {
-          }
-
-          $paths = [
-            $dirpath_xml."/".$server_year_folder,
-            $dirpath_xml."/".$server_move_folder,
-          ];
-          foreach ($paths as $key => $path) {
-            if (!file_exists($path)){
-                $old = umask(0);
-                mkdir($path, 0777, true);
-                @chmod($path, 0777);
-                umask($old);
-            }
-            @ftp_mkdir($conn_id, $server_year_folder);
-            @ftp_mkdir($conn_id, $server_move_folder);
-          }
-
           $chave        = recursive_array_search('infCFe',$xml_nfe);
           $chave        = array_get_by_array($xml_nfe,$chave)['@attributes']['Id'];
           $chave        = preg_replace("/[^0-9]/","",$chave);
 
-          $data['Files'][] = array(
-            'xml_path' => $file, $dirname."/".$server_move_folder."/".$basename,
-            'chave'    => $chave,
-            'sale_id'  => $sale_id,
+          $chCanc       = recursive_array_search('chCanc',$xml_nfe);
+
+          $data['files_debug'][] = array(
+            'file' => $file,
           );
+          if($chCanc !== null) {
+            // $data['Cancelados']
+          } else {
+            $xml_total        = recursive_array_search('ICMSTot',$xml_nfe);
+            $xml_total        = array_get_by_array($xml_nfe,$xml_total)['vProd'];
 
+            if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
+              rename($file, "{$dirname}/{$server_move_folder}/{$basename}");
+            } else {
+              throw new \Exception("Não foi possível enviar ao Servidor", 1);
+            }
+
+            $paths = [
+              $dirpath_xml."/".$server_year_folder,
+              $dirpath_xml."/".$server_move_folder,
+            ];
+            foreach ($paths as $key => $path) {
+              if (!file_exists($path)){
+                  $old = umask(0);
+                  mkdir($path, 0777, true);
+                  @chmod($path, 0777);
+                  umask($old);
+              }
+              @ftp_mkdir($conn_id, $server_year_folder);
+              @ftp_mkdir($conn_id, $server_move_folder);
+            }
+
+
+            $data['Files'][] = array(
+              'xml_path' => $file, $dirname."/".$server_move_folder."/".$basename,
+              'chave'    => $chave,
+              'sale_id'  => $sale_id,
+              'rename' => "{$dirname}/{$server_move_folder}/{$basename}",
+              'xml_path_server' => "{$xml_path_server}.{$basename}",
+              'xml_date' => $xml_date,
+              'xml_total' => $xml_total,
+            );
+          }
         }
-
         $data['message'] = 'NFE organizado via PHP';
 
       } else {
