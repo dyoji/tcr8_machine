@@ -304,16 +304,16 @@
           $server_month_folder = "01";
           $server_move_folder  = "1900/01";
 
-          $paths = [
-            $xml_dir."/".$server_year_folder,
-            $xml_dir."/".$server_move_folder,
-          ];
 
           if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
             rename($file, $dirname."/".$server_move_folder."/".$basename);
           } else {
           }
 
+          $paths = [
+            $dirpath_xml."/".$server_year_folder,
+            $dirpath_xml."/".$server_move_folder,
+          ];
           foreach ($paths as $key => $path) {
             if (!file_exists($path)){
                 $old = umask(0);
@@ -330,9 +330,9 @@
           $chave        = preg_replace("/[^0-9]/","",$chave);
 
           $data['Files'][] = array(
-            xml_path => $file, $dirname."/".$server_move_folder."/".$basename,
-            chave    => $chave,
-            sale_id  => $sale_id,
+            'xml_path' => $file, $dirname."/".$server_move_folder."/".$basename,
+            'chave'    => $chave,
+            'sale_id'  => $sale_id,
           );
 
         }
