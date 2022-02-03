@@ -261,9 +261,8 @@
   function organize_sat_locally(){
     $data = array();
   	try{
-  		if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
-  		$_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
-
+  		// if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+  		// $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
       $cnpj  = cfg['store']['cnpj'];
 
       $filepath_temp = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/myText.temp";
