@@ -264,6 +264,8 @@
   	try{
   		if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
   		$_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $data['_DADOS'] = $_DADOS;
       $cnpj = (isset( $_DADOS['cnpj'] ) ? $_DADOS['cnpj'] : false);
       $sale_id = (isset( $_DADOS['sale_id'] ) ? $_DADOS['sale_id'] : false);
       if(!$cnpj || !$sale_id) throw new \Exception("Existem campos necessário que não foram informados", 1);
