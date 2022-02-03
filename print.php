@@ -301,9 +301,9 @@
           $server_month_folder = date("m", strtotime($date));
           $server_move_folder  = date("Y/m", strtotime($date));
 
-          $server_year_folder  = "1900";
-          $server_month_folder = "01";
-          $server_move_folder  = "1900/01";
+          // $server_year_folder  = "1900";
+          // $server_month_folder = "01";
+          // $server_move_folder  = "1900/01";
 
           $chave        = recursive_array_search('infCFe',$xml_nfe);
           $chave        = array_get_by_array($xml_nfe,$chave)['@attributes']['Id'];
@@ -321,7 +321,7 @@
             $xml_total        = array_get_by_array($xml_nfe,$xml_total)['vProd'];
 
             if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
-              rename($file, "{$dirname}/{$server_move_folder}/{$basename}");
+              rename($file, "{$dirname}/{$server_move_folder}{$basename}");
             } else {
               throw new \Exception("Não foi possível enviar ao Servidor", 1);
             }
@@ -346,8 +346,8 @@
               'xml_path' => $file, $dirname."/".$server_move_folder."/".$basename,
               'chave'    => $chave,
               'sale_id'  => $sale_id,
-              'rename' => "{$dirname}/{$server_move_folder}/{$basename}",
-              'xml_path_server' => "{$xml_path_server}.{$basename}",
+              'rename' => "{$dirname}/{$server_move_folder}{$basename}",
+              'xml_path_server' => "{$xml_path_server}{$basename}",
               'xml_date' => $xml_date,
               'xml_total' => $xml_total,
             );
