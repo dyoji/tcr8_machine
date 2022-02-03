@@ -304,12 +304,12 @@
           $server_month_folder = "01";
           $server_move_folder  = "1900/01";
 
+          // $data['files'][] = array(
+          //   'file' => $file,
+          //   'rename' => "{$dirname}/{$server_move_folder}/{$basename}",
+          // )
 
           if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
-            $data['files'][] = array(
-              'file' => $file,
-              'rename' => "{$dirname}/{$server_move_folder}/{$basename}",
-            )
             rename($file, "{$dirname}/{$server_move_folder}/{$basename}");
           } else {
           }
