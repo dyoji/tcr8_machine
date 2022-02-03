@@ -258,4 +258,151 @@
   	echo json_encode($data);
   	exit;
   }
+  function organize_sat_locally(){
+    $data = array();
+  	try{
+  		if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+  		$_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $cnpj  = cfg['store']['cnpj'];
+
+      $filepath_temp = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/myText.temp";
+      $filepath_txt = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/{$_DADOS['nfe_filename']}";
+      $dirpath_xml = "{$_DADOS['SATPHP']['sevenbuilds']['xml_dir']}";
+
+      $files = get_files_from_folder($dirpath_xml,'xml');
+      if(count($files)>0){
+        $conn_id       =  ftp_server_conn();
+        $folder_xml    = "/tcr8.com.br/public_html/tcr8_local/nfe/$cnpj/files/SAT";
+        ftp_chdir($conn_id, $folder_xml);
+        foreach ($files as $key => $file) {
+          // if($key > 0) return;
+          $file_parts = pathinfo($file);
+          $basename  = $file_parts['basename'];
+          $filename  = $file_parts['filename'];
+          $extension = $file_parts['extension'];
+          $dirname   = $file_parts['dirname'];
+
+          $xml_nfe     = json_decode(json_encode( (array) simplexml_load_file($file) ), 1);
+          $date        = recursive_array_search('dEmi',$xml_nfe);
+          $date        = array_get_by_array($xml_nfe,$date);
+          $xml_hour        = recursive_array_search('hEmi',$xml_nfe);
+          $xml_hour        = array_get_by_array($xml_nfe,$xml_hour);
+          $xml_hour 					 = substr($xml_hour, 0, 2).":".substr($xml_hour, 2, 2).":".substr($xml_hour, 4, 2);
+
+          $xml_date            = date("Y-m-d",strtotime($date))." ".$xml_hour;
+
+          $server_year_folder  = date("Y", strtotime($date));
+          $server_month_folder = date("m", strtotime($date));
+          $server_move_folder  = date("Y/m", strtotime($date));
+
+          $server_year_folder  = "1900";
+          $server_month_folder = "01";
+          $server_move_folder  = "1900/01";
+
+          $paths = [
+            $xml_dir."/".$server_year_folder,
+            $xml_dir."/".$server_move_folder,
+          ];
+          foreach ($paths as $key => $path) {
+            if (!file_exists($path)){
+                $old = umask(0);
+                mkdir($path, 0777, true);
+                @chmod($path, 0777);
+                umask($old);
+            }
+            @ftp_mkdir($conn_id, $server_year_folder);
+            @ftp_mkdir($conn_id, $server_move_folder);
+          }
+
+          $chave        = recursive_array_search('infCFe',$xml_nfe);
+          $chave        = array_get_by_array($xml_nfe,$chave)['@attributes']['Id'];
+          $chave        = preg_replace("/[^0-9]/","",$chave);
+
+          if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
+            rename($file, $dirname."/".$server_move_folder."/".$basename);
+          } else {
+          }
+        }
+      }
+
+
+  		$data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = 'NFE organizado via PHP';
+  	} catch (Exception $e){
+  	  $data['success'] = false;
+  	  $data['message'] = $e->getMessage();
+  	}
+    $data['msg'] = $data['message'];
+  	echo json_encode($data);
+  	exit;
+  }
+
+  function organize_xml_byphp($xml_dir,$cnpj) {
+    $files = get_files_from_folder($xml_dir,'xml');
+    if(count($files)>0){
+      $conn_id       =  ftp_server_conn();
+      $cnpj          = '24593673000160';
+      $folder_xml    = "/tcr8.com.br/public_html/tcr8_local/nfe/$cnpj/files/SAT";
+      ftp_chdir($conn_id, $folder_xml);
+      foreach ($files as $key => $file) {
+        // if($key > 0) return;
+        $file_parts = pathinfo($file);
+        $basename  = $file_parts['basename'];
+        $filename  = $file_parts['filename'];
+        $extension = $file_parts['extension'];
+        $dirname   = $file_parts['dirname'];
+
+        $xml_nfe     = json_decode(json_encode( (array) simplexml_load_file($file) ), 1);
+        $date        = recursive_array_search('dEmi',$xml_nfe);
+        $date        = array_get_by_array($xml_nfe,$date);
+        $xml_hour        = recursive_array_search('hEmi',$xml_nfe);
+        $xml_hour        = array_get_by_array($xml_nfe,$xml_hour);
+        $xml_hour 					 = substr($xml_hour, 0, 2).":".substr($xml_hour, 2, 2).":".substr($xml_hour, 4, 2);
+
+        $xml_date            = date("Y-m-d",strtotime($date))." ".$xml_hour;
+
+        $server_year_folder  = date("Y", strtotime($date));
+        $server_month_folder = date("m", strtotime($date));
+        $server_move_folder  = date("Y/m", strtotime($date));
+
+        $server_year_folder  = "1900";
+        $server_month_folder = "01";
+        $server_move_folder  = "1900/01";
+
+        $paths = [
+          $xml_dir."/".$server_year_folder,
+          $xml_dir."/".$server_move_folder,
+        ];
+        foreach ($paths as $key => $path) {
+          if (!file_exists($path)){
+              $old = umask(0);
+              mkdir($path, 0777, true);
+              @chmod($path, 0777);
+              umask($old);
+          }
+          @ftp_mkdir($conn_id, $server_year_folder);
+          @ftp_mkdir($conn_id, $server_move_folder);
+        }
+
+        $chave        = recursive_array_search('infCFe',$xml_nfe);
+        $chave        = array_get_by_array($xml_nfe,$chave)['@attributes']['Id'];
+        $chave        = preg_replace("/[^0-9]/","",$chave);
+
+        if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
+          rename($file, $dirname."/".$server_move_folder."/".$basename);
+
+         // echo "successfully uploaded $file\n";
+        } else {
+         // echo "There was a problem while uploading $file\n";
+        }
+        // echo "<pre>";
+        // print_r($xml_nfe);
+        // echo "</pre>";    // code...
+      }
+    }
+  }
+
 ?>
