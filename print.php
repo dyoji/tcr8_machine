@@ -267,8 +267,7 @@
 
       $data['_DADOS'] = $_DADOS;
       $cnpj = (isset( $_DADOS['cnpj'] ) ? $_DADOS['cnpj'] : false);
-      $sale_id = (isset( $_DADOS['sale_id'] ) ? $_DADOS['sale_id'] : false);
-      if(!$cnpj || !$sale_id) throw new \Exception("Existem campos necessário que não foram informados", 1);
+      if(!$cnpj) throw new \Exception("Existem campos necessário que não foram informados", 1);
 
       $filepath_temp = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/myText.temp";
       $filepath_txt = "{$_DADOS['SATPHP']['sevenbuilds']['proc_dir']}/{$sale_id}.txt";
@@ -287,6 +286,7 @@
           $filename  = $file_parts['filename'];
           $extension = $file_parts['extension'];
           $dirname   = $file_parts['dirname'];
+          $sale_id = $filename;
 
           $xml_nfe     = json_decode(json_encode( (array) simplexml_load_file($file) ), 1);
           $date        = recursive_array_search('dEmi',$xml_nfe);
