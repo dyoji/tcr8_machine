@@ -323,6 +323,11 @@
           } else {
           }
         }
+        $data['message'] = 'NFE organizado via PHP';
+
+      } else {
+        $data['message'] = 'NFE já estava organizado';
+
       }
 
 
@@ -332,7 +337,6 @@
       $data['message'] = 'NFE organizado via PHP';
   	} catch (Exception $e){
   	  $data['success'] = false;
-  	  $data['message'] = $e->getMessage();
   	}
     $data['msg'] = $data['message'];
   	echo json_encode($data);
