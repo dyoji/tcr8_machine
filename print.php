@@ -321,6 +321,14 @@
             $xml_total        = recursive_array_search('ICMSTot',$xml_nfe);
             $xml_total        = array_get_by_array($xml_nfe,$xml_total)['vProd'];
 
+            $new_xml_file = $basename;
+            $new_xml_path_ftp    = $server_move_folder."/".$new_xml_file;
+            if(ftp_size($conn_id,$new_xml_path_ftp) > 0){
+              // $data['errors'][] = "Arquivo não existe";
+              $new_xml_path_ftp = update_ftp_fname($new_xml_path_ftp,$conn_id);
+            }
+
+
             if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
               rename($file, "{$dirname}/{$server_move_folder}{$basename}");
             } else {
@@ -349,6 +357,7 @@
               'sale_id'  => $sale_id,
               'rename' => "{$dirname}/{$server_move_folder}{$basename}",
               'xml_path_server' => "{$xml_path_server}{$basename}",
+              'new_xml_path_ftp' => "{$new_xml_path_ftp}",
               'xml_date' => $xml_date,
               'xml_total' => $xml_total,
             );
