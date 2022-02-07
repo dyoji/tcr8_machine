@@ -116,4 +116,27 @@
     return $conn_id;
   }
 
+  function update_ftp_fname($file,$conn_id){
+  	$pos = strrpos($file,'.');
+  	$ext = substr($file,$pos);
+  	$dir = strrpos($file,'/');
+  	$dr  = substr($file,0,($dir+1));
+
+  	$arr = explode('/',$file);
+  	$fName = substr($arr[(count($arr) - 1)], 0, -strlen($ext));
+
+  	$exist = FALSE;
+  	$i = 2;
+
+  	while(!$exist)
+  	{
+  		$file = $dr.$fName.'_'.$i.$ext;
+  		if(ftp_size($conn_id,$file) < 0){
+  			$exist = TRUE;
+  		}
+  		$i++;
+  	}
+  	return $file;
+  }
+
 ?>

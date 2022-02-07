@@ -302,6 +302,9 @@
           $server_month_folder = date("m", strtotime($date));
           $server_move_folder  = date("Y/m", strtotime($date));
 
+          @ftp_mkdir($conn_id, $server_year_folder);
+          @ftp_mkdir($conn_id, $server_move_folder);
+
           // $server_year_folder  = "1900";
           // $server_month_folder = "01";
           // $server_move_folder  = "1900/01";
@@ -329,7 +332,7 @@
             }
 
 
-            if (ftp_put($conn_id, $server_move_folder."/".$basename, $file, FTP_ASCII)) {
+            if (ftp_put($conn_id, $new_xml_path_ftp, $file, FTP_ASCII)) {
               rename($file, "{$dirname}/{$server_move_folder}{$basename}");
             } else {
               throw new \Exception("Não foi possível enviar ao Servidor", 1);
