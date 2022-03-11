@@ -81,7 +81,7 @@
     foreach ($cdir as $key => $value) {
        if (!in_array($value,array(".",".."))) {
           if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
-            //é Diretório, não faz nada;
+            // é Diretório, não faz nada;
              // $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
           } else {
             $file_parts = pathinfo($value);
@@ -138,5 +138,29 @@
   	}
   	return $file;
   }
+
+  function update_file_name($file) {
+  	$pos = strrpos($file,'.');
+  	$ext = substr($file,$pos);
+  	$dir = strrpos($file,'/');
+  	$dr  = substr($file,0,($dir+1));
+
+  	$arr = explode('/',$file);
+  	$fName = substr($arr[(count($arr) - 1)], 0, -strlen($ext));
+
+  	$exist = FALSE;
+  	$i = 2;
+
+  	while(!$exist)
+  	{
+  		$file = $dr.$fName.'_'.$i.$ext;
+  		if(!file_exists($file))
+  			$exist = TRUE;
+
+  		$i++;
+  	}
+  	return $file;
+  }
+
 
 ?>
