@@ -240,11 +240,22 @@
       $response = $sc->recv();
       $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,$sc);
 
-      // $filepath_txt = 'C:/ACBrMonitorPLUS/XML/log.txt';
-      // if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
-      // $fp = fopen($filepath_txt,"wb");
-      // fwrite($fp,$retorno);
-      // fclose($fp);
+      $filename = "log_".date('Ymd_Hms');
+      if( preg_match("/CFe\d{44}/", $retorno, $chNFe) ){
+        $chNFe = preg_replace('/[^0-9.]+/', '', $chNFe[0]);
+        $filename .= "_".$chNFe.".txt";
+        // echo "<pre>";
+        // print_r( $chNFe );
+        // echo "</pre>";
+      } else {
+        $filename .= ".txt";
+      }
+
+      $filepath_txt = 'C:/ACBrMonitorPLUS/XML/'.$filename;
+      if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+      $fp = fopen($filepath_txt,"wb");
+      fwrite($fp,$retorno);
+      fclose($fp);
       // if(!$retorno) throw new \Exception("Error Processing Request", 1);
       $data['retorno'] = base64_encode($retorno);
 
