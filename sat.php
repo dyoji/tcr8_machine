@@ -33,10 +33,19 @@
     extract($GLOBALS);
     $crlf = chr(13).chr(10).chr(46).chr(13).chr(10);
     $cmd = $command.'('.$file.')'.$crlf;
+
     if($sc) {
       $sc->send($cmd);
       $resposta = $sc->recv();
     } else {
+      $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/teste.txt";
+      // $filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
+      if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+      // $data['nfe_filepath'] = $filepath_txt;
+      $fp = fopen($filepath_txt,"wb");
+      fwrite($fp,$cmd);
+      fclose($fp);
+
       $resposta = false;
     }
     return $resposta;
@@ -74,6 +83,96 @@
     echo json_encode($data);
     exit;
   }
+
+  function acbr_sat_emit(){
+    extract($GLOBALS);
+    $data = array();
+    try{
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $acbr_ip = isset($_DADOS['acbr_ip']) ? $_DADOS['acbr_ip'] : "127.0.0.1";
+      $acbr_port = isset($_DADOS['acbr_port']) ? $_DADOS['acbr_port'] : "3434";
+      $crlf = chr(13).chr(10).chr(46).chr(13).chr(10);
+
+      $acbr_txts = $_DADOS['acbr_txts'];
+      $filepath_txt = $_DADOS['nfe_filepath'];
+
+      //INICIALIZAR O SAT
+      $filepath_txt_init = 'C:/ACBrMonitorPLUS/TXT/OU/SAT_INIT-resp.txt';
+      $deleted = unlink($filepath_txt_init);
+
+      $_COMMANDS_INIT = 'SAT.Inicializar();';
+      $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/SAT_INIT.txt";
+      if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+      $fp = fopen($filepath_txt,"wb");
+      fwrite($fp,$_COMMANDS_INIT);
+      fclose($fp);
+      $x = 0;
+      $count = 5;
+      do {
+        if(!file_exists($filepath_txt_init)){
+          $x++;
+          if($x >= $count) throw new \Exception("SAT não incializado", 1);
+          $data['txtini_resp'][] = "[$x] File still Loading";
+          sleep(1);//Delays the program execution for 5seconds before code continues.
+        } else {
+          $x = $count;
+          $data['txtini_resp'][] = "[$x] Ok, Loaded";
+
+
+          //SAT INICIALIZADO, VAMOS EMITIR O SAT
+          $_COMMANDS = "";
+          foreach ($acbr_txts as $key => $_TXT) {
+            $_TXT['path'] = $filepath_txt.$_TXT['nfe_filename'];
+
+            if(file_exists($_TXT['path'])) $_TXT['path'] = update_file_name($_TXT['path']);
+            $nfse_content  = base64_decode($_TXT['nfe_text']);
+            $fp = fopen($_TXT['path'],"wb");
+            fwrite($fp,$nfse_content);
+            fclose($fp);
+            $_TXT['message'] = 'TXT salvo localmente e pronto para gerar o SAT';
+            $data['Records'][] = $_TXT;
+            $_COMMANDS .= 'SAT.CriarEnviarCFe('.$_TXT['path'].');'.$crlf;
+          }
+
+          $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/SAT_ENVIAR.txt";
+          // $filepath_txt = "C:/ACBrMonitorPLUS/TXT/teste.txt";
+          // $filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
+          if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+          $fp = fopen($filepath_txt,"wb");
+          fwrite($fp,$_COMMANDS);
+          fclose($fp);
+
+          // header('Location: '.$file);
+          // exit();
+        }
+      }
+      while($x < 5); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
+      // FIM DE INICIALIZAR
+
+
+
+      // $filepath_txt = "C:/ACBrMonitorPLUS/TXT/teste.txt";
+      // if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+      // $fp = fopen($filepath_txt,"wb");
+      // fwrite($fp,$_COMMANDS);
+      // fclose($fp);
+
+
+      $data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = '';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
+
 
   function acbr_organize_sales(){
     $data = array();
@@ -234,11 +333,15 @@
 
       $sat_cmd = $_DADOS['sat_cmd'];
       $nfe_filepath = $_DADOS['nfe_filepath'];
-
-      $sc = new ClientSocket();
-      $sc->open($acbr_ip,$acbr_port);
-      $response = $sc->recv();
-      $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,$sc);
+      $txtcomm = true;
+      if($txtcomm) {
+        $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,false);
+      } else {
+        $sc = new ClientSocket();
+        $sc->open($acbr_ip,$acbr_port);
+        $response = $sc->recv();
+        $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,$sc);
+      }
 
       $filename = "log_".date('Ymd_Hms');
       if( preg_match("/CFe\d{44}/", $retorno, $chNFe) ){
