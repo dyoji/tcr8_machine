@@ -144,11 +144,18 @@
           fwrite($fp,$_COMMANDS);
           fclose($fp);
 
+          //gravar debug
+          $filepath_txt_debug = "C:/ACBrMonitorPLUS/TXT/SAT_ENVIAR_".date('Ymd_Hms');
+          if(file_exists($filepath_txt_debug)) $filepath_txt_debug = update_file_name($filepath_txt_debug);
+          $fp_debug = fopen($filepath_txt_debug,"wb");
+          fwrite($fp_debug,$_COMMANDS);
+          fclose($fp_debug);
+
+
           // header('Location: '.$file);
           // exit();
         }
-      }
-      while($x < 5); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
+      } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
       // FIM DE INICIALIZAR
 
 
