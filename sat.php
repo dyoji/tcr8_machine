@@ -109,7 +109,7 @@
       fwrite($fp,$_COMMANDS_INIT);
       fclose($fp);
       $x = 0;
-      $count = 5;
+      $count = 10;
       do {
         if(!file_exists($filepath_txt_init)){
           $x++;
