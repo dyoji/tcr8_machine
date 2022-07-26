@@ -658,14 +658,17 @@
 
       $sat_cmd = $_DADOS['sat_cmd'];
       $nfe_filepath = $_DADOS['nfe_filepath'];
+      $path_parts = pathinfo($nfe_filepath);
+      $xml_path = $path_sync.$path_parts['basename'];
+      $data['xml_path'] = $xml.path;
       $txtcomm = true;
       if($txtcomm) {
-        $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,false);
+        $retorno = acbrCommandFile($sat_cmd,$xml_path,false);
       } else {
         $sc = new ClientSocket();
         $sc->open($acbr_ip,$acbr_port);
         $response = $sc->recv();
-        $retorno = acbrCommandFile($sat_cmd,$nfe_filepath,$sc);
+        $retorno = acbrCommandFile($sat_cmd,$xml_path,$sc);
       }
 
       $filename = "log_".date('Ymd_Hms');
