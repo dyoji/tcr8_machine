@@ -129,6 +129,7 @@
       $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
       $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
       $path_vendas = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/";
+      $path_sync = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/sync/";
       $path_xml = $_DIRS['root'].$_DIRS['xml']."/";
 
       $path_IN = $_DIRS['root']."TXT/IN/";
@@ -177,7 +178,8 @@
       if(isset($data['uploads']['files'])) {
         foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
           if($_UPLOAD['success']) {
-            if(file_exists( $path_vendas . $_UPLOAD['name'] )) unlink($path_vendas . $_UPLOAD['name']);
+            new_folder($path_sync);
+            if(file_exists( $path_vendas . $_UPLOAD['name'] )) rename($path_vendas . $_UPLOAD['name'],$path_sync . $_UPLOAD['name']);
           }
         }
       }
@@ -640,8 +642,19 @@
       if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
       $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
 
-      $acbr_ip = isset($_DADOS['acbr_ip']) ? $_DADOS['acbr_ip'] : "127.0.0.1";
-      $acbr_port = isset($_DADOS['acbr_port']) ? $_DADOS['acbr_port'] : "3434";
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+      $data['store'] = $_STORE = $_DADOS['store_obj'];
+      $path_root = $_DIRS['root'];
+      $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
+      $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
+      $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
+      $path_vendas = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/";
+      $path_sync = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/sync/";
+      $path_xml = $_DIRS['root'].$_DIRS['xml']."/";
 
       $sat_cmd = $_DADOS['sat_cmd'];
       $nfe_filepath = $_DADOS['nfe_filepath'];
