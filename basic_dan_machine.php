@@ -98,6 +98,69 @@
     return $return;
   }
 
+  function getDirContents($dir, &$results = array()) {
+      $files = scandir($dir);
+
+      foreach ($files as $key => $value) {
+          $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
+          if (!is_dir($path)) {
+              $results[] = $path;
+          } else if ($value != "." && $value != "..") {
+              getDirContents($path, $results);
+              $results[] = $path;
+          }
+      }
+
+      return $results;
+  }
+
+  function new_folder($folder){
+  	//mkdir make dir mk_dir
+    if (!file_exists($folder)) {
+      $old = umask(0);
+      mkdir($folder, 0777, true);
+      @chmod($folder, 0777);
+      umask($old);
+    }
+  }
+
+  function get_string_between($string, $start, $end){
+          $string = " ".$string;
+         $ini = strpos($string,$start);
+          if ($ini == 0) return "";
+          $ini += strlen($start);
+           $len = strpos($string,$end,$ini) - $ini;
+          return substr($string,$ini,$len);
+  }
+
+  function NFe_search($arr, $key_to_find,$null = false,$char = true){
+  	$val = (find_val_by_key($arr, $key_to_find));
+  	if($val && $char) {
+  		return char($val);
+  	} if($val) {
+  		return $val;
+  	} elseif ($null) {
+  		return 'NULL';
+  		// code...
+  	} else {
+  		return char('');
+  	}
+
+  }
+
+  function find_val_by_key($arr, $key_to_find) {
+  	$key_original = $key_to_find;
+  	$val_find = false;
+  	// echo $arr."<br>";
+  	array_walk_recursive( $arr, function($value, $key) use (& $key_to_find) {
+  		// echo "$key = $key_to_find<br>";
+
+  		if($key == $key_to_find)  $key_to_find = $value;
+  	},  $key_to_find);
+  	if($key_original == $key_to_find) $key_to_find = false;
+  	return  $key_to_find;
+  }
+
   function ftp_server_conn(){
     $ftp_server    = 'tcr8.com.br';
     $ftp_port      = '21';

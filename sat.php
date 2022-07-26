@@ -19,6 +19,35 @@
 
   tcr8_function();
 
+  function read_last_line($filepath){
+    $line = '';
+    $f = fopen($filepath, 'r');
+    $cursor = -1;
+    fseek($f, $cursor, SEEK_END);
+    $char = fgetc($f);
+    /**
+     * Trim trailing newline chars of the file
+     */
+    while ($char === "\n" || $char === "\r") {
+        fseek($f, $cursor--, SEEK_END);
+        $char = fgetc($f);
+    }
+    /**
+     * Read until the start of file or first newline char
+     */
+    while ($char !== false && $char !== "\n" && $char !== "\r") {
+        /**
+         * Prepend the new char
+         */
+        $line = $char . $line;
+        fseek($f, $cursor--, SEEK_END);
+        $char = fgetc($f);
+    }
+
+    fclose($f);
+    return $line;
+  }
+
   function acbrCommand($cmd,$sc = false){
     if($sc) {
       $sc->send($cmd);
@@ -84,13 +113,234 @@
     exit;
   }
 
-  function acbr_sat_emit(){
+  function upload_xmls(){
+    //é o mais novo organizador 22/07/2022
     extract($GLOBALS);
     $data = array();
     try{
       if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
       $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
 
+      $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+      $data['store'] = $_STORE = $_DADOS['store_obj'];
+      $path_root = $_DIRS['root'];
+      $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
+      $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
+      $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
+      $path_vendas = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/";
+      $path_xml = $_DIRS['root'].$_DIRS['xml']."/";
+
+      $path_IN = $_DIRS['root']."TXT/IN/";
+      $path_OU = $_DIRS['root']."TXT/OU/";
+
+      $postData = ['somevar' => 'hello'];
+
+      foreach (get_files_from_folder($path_vendas) as $key => $file_path) {
+        if($key > 15) continue;
+
+        $file_data = array();
+        $path_parts = pathinfo($file_path);
+        // echo $path_parts['dirname'], "\n";
+        // echo $path_parts['basename'], "\n";
+        // echo $path_parts['extension'], "\n";
+        // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
+       // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
+
+        $postData['file[' . $key . ']'] = curl_file_create(
+            realpath($file_path),
+            mime_content_type($file_path),
+            basename($file_path)
+        );
+
+        $data['Records'][] = $file_path;
+        // code...
+      }
+
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
+      // curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
+      curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+      curl_setopt($ch, CURLOPT_TIMEOUT, 60); //86400 = 1 Day Timeout
+      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+
+      $response = curl_exec($ch);
+      if (curl_errno($ch)) {
+         throw new \Exception("$ch Error Processing Request", 1);
+      } else {
+         $data['uploads'] = json_decode($response,true);
+      }
+      if(isset($data['uploads']['files'])) {
+        foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
+          if($_UPLOAD['success']) {
+            if(file_exists( $path_vendas . $_UPLOAD['name'] )) unlink($path_vendas . $_UPLOAD['name']);
+          }
+        }
+      }
+
+      curl_close($ch);
+
+      $data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = '';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
+
+
+  function acbr_organizer(){
+    //é o mais novo organizador 22/07/2022
+    extract($GLOBALS);
+    $data = array();
+    try{
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+      $data['store'] = $_STORE = $_DADOS['store_obj'];
+      $path_root = $_DIRS['root'];
+      $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
+      $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
+      $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
+      $path_vendas = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/";
+      $path_xml = $_DIRS['root'].$_DIRS['xml']."/";
+
+      $path_IN = $_DIRS['root']."TXT/IN/";
+      $path_OU = $_DIRS['root']."TXT/OU/";
+
+      foreach (get_files_from_folder($path_vendas) as $key => $file_path) {
+        $file_data = array();
+        $path_parts = pathinfo($file_path);
+        // echo $path_parts['dirname'], "\n";
+        // echo $path_parts['basename'], "\n";
+        // echo $path_parts['extension'], "\n";
+        // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
+
+        $xml = file_get_contents($file_path);
+        $xml_nfe = json_decode(json_encode( (array) simplexml_load_string($xml) ), 1);
+        $data['xml'][] = $xml_nfe;
+        $file_data['xml'] = $xml;
+        // $file_data['zip'] = gzencode(base64_encode($xml));
+        $file_data['zip'] = base64_encode(gzencode($xml));
+        $file_data['basename'] = $path_parts['basename'];
+        $file_data['xml'] = $xml_nfe;
+        $file_data['chNFe'] = $chNFe = str_replace("CFe", "",($xml_nfe['infCFe']['@attributes']['Id']));
+        $file_data['dEmi'] = date_format(date_create_from_format('Ymd', ($xml_nfe['infCFe']['ide']['dEmi'])), 'Y-m-d');
+
+        if( isset($xml_nfe['infCFe']['infAdic']['infCpl']) ){
+          $data['infCpl'][] = $infCpl = ($xml_nfe['infCFe']['infAdic']['infCpl']);
+          if(strpos($infCpl, 'Pedido') !== false){
+            $pedido_crude = get_string_between($infCpl, '[', ']');
+            $file_data['sale_id'] = $sale_id = explode(':',$pedido_crude)[1];
+            $file_data['cnpj'] = $emit_cnpj = ($xml_nfe['infCFe']['emit']['CNPJ']);
+
+          } else continue;
+        } else continue;
+        $data['Records'][] = $file_data;
+        // code...
+      }
+
+      $data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = 'ORGANIZADO COM SUCESSO';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
+
+  function upload_xml(){
+    $data = array(
+       'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
+       // 'destination' => 'destination path in which file will be uploaded',
+       // 'calling_method' => 'upload_file',
+       // 'file_name' => 'file name, you want to give when upload will completed'
+    );
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://fl.curumim.tcr8.com.br/actions/nfe.php?action=xml_upload');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 86400); // 1 Day Timeout
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+
+    $response = curl_exec($ch);
+    if (curl_errno($ch)) {
+
+       $msg = FALSE;
+    } else {
+       $msg = $response;
+    }
+
+    curl_close($ch);
+    echo $msg;
+  }
+
+  function acbr_after_save_organized(){
+    extract($GLOBALS);
+    $data = array();
+    try{
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+
+      $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+      $data['store'] = $_STORE = $_DADOS['store_obj'];
+      $path_root = $_DIRS['root'];
+      $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
+      $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
+      $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
+      $path_vendas = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['vendas']."/".$_STORE['cnpj']."/";
+      $path_xml = $_DIRS['root'].$_DIRS['xml']."/";
+
+      foreach ($_DADOS['organized'] as $key => $_XML) {
+        $dEmi = date_create_from_format('Y-m-d', $_XML['dEmi']) ;
+        $year_folder = date_format($dEmi, 'Y');
+        $move_folder = date_format($dEmi, 'Y')."/".date_format($dEmi, 'm');
+        new_folder($path_vendas.$move_folder);
+
+        rename($path_vendas.$_XML['basename'], $path_vendas.$move_folder."/".$_XML['basename']);
+        $data['move_dir'][] = array(
+          'old' => $path_vendas.$_XML['basename'],
+          'new' => $path_vendas.$move_folder."/".$_XML['basename'],
+        );
+        // $data['deleted'][] = @unlink($path_vendas.$_ORGANIZED['basename']);
+        // code...
+      }
+      $data['success'] = true;
+      $data['close_all'] = false;
+      $data['reload']    = false;
+      $data['message'] = '';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
+
+  function acbr_sat_emit(){
+    extract($GLOBALS);
+    $data = array();
+    try{
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+      $data['_DADOS'] = $_DADOS;
       $acbr_ip = isset($_DADOS['acbr_ip']) ? $_DADOS['acbr_ip'] : "127.0.0.1";
       $acbr_port = isset($_DADOS['acbr_port']) ? $_DADOS['acbr_port'] : "3434";
       $crlf = chr(13).chr(10).chr(46).chr(13).chr(10);
@@ -99,19 +349,25 @@
       $filepath_txt = $_DADOS['nfe_filepath'];
 
       //INICIALIZAR O SAT
-      $filepath_txt_init = 'C:/ACBrMonitorPLUS/TXT/OU/SAT_INIT-resp.txt';
-      $deleted = unlink($filepath_txt_init);
+      $path_root = "C:/ACBrMonitorPLUS/";
+      $path_IN = $path_root."TXT/IN/";
+      $path_OU = $path_root."TXT/OU/";
+      // $deleted = unlink($SAT_ENVIAR_filepath_txt);
 
       $_COMMANDS_INIT = 'SAT.Inicializar();';
-      $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/SAT_INIT.txt";
-      if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
-      $fp = fopen($filepath_txt,"wb");
+      $filepath_SAT_INIT_IN_txt = $path_IN."SAT_INIT.txt";
+      $filepath_SAT_INIT_OU_txt = $path_OU."SAT_INIT-resp.txt";
+      $deleted = @unlink($filepath_SAT_INIT_OU_txt);
+
+      if(file_exists($filepath_SAT_INIT_IN_txt)) $filepath_SAT_INIT_IN_txt = update_file_name($filepath_SAT_INIT_IN_txt);
+      $fp = fopen($filepath_SAT_INIT_IN_txt,"wb");
       fwrite($fp,$_COMMANDS_INIT);
       fclose($fp);
+
       $x = 0;
       $count = 10;
       do {
-        if(!file_exists($filepath_txt_init)){
+        if(!file_exists($filepath_SAT_INIT_OU_txt)){
           $x++;
           if($x >= $count) throw new \Exception("SAT não incializado", 1);
           $data['txtini_resp'][] = "[$x] File still Loading";
@@ -120,12 +376,13 @@
           $x = $count;
           $data['txtini_resp'][] = "[$x] Ok, Loaded";
 
-
           //SAT INICIALIZADO, VAMOS EMITIR O SAT
-          $_COMMANDS = "";
           foreach ($acbr_txts as $key => $_TXT) {
-            $_TXT['path'] = $filepath_txt.$_TXT['nfe_filename'];
+            $sale_id = $_TXT['sale_id'];
+            $SAT_ENVIAR_filepath_IN_txt = $path_IN."SATENVIAR_".$sale_id.".txt";
+            $SAT_ENVIAR_filepath_OU_txt = $path_OU."SATENVIAR_".$sale_id."-resp.txt";
 
+            $_TXT['path'] = $filepath_txt.$_TXT['nfe_filename'];
             if(file_exists($_TXT['path'])) $_TXT['path'] = update_file_name($_TXT['path']);
             $nfse_content  = base64_decode($_TXT['nfe_text']);
             $fp = fopen($_TXT['path'],"wb");
@@ -133,30 +390,77 @@
             fclose($fp);
             $_TXT['message'] = 'TXT salvo localmente e pronto para gerar o SAT';
             $data['Records'][] = $_TXT;
-            $_COMMANDS .= 'SAT.CriarEnviarCFe('.$_TXT['path'].');'.$crlf;
+            $_COMMANDS = 'SAT.CriarEnviarCFe('.$_TXT['path'].');'.$crlf;
+
+            if(file_exists($SAT_ENVIAR_filepath_IN_txt)) $SAT_ENVIAR_filepath_IN_txt = update_file_name($SAT_ENVIAR_filepath_IN_txt);
+            $fp = fopen($SAT_ENVIAR_filepath_IN_txt,"wb");
+            fwrite($fp,$_COMMANDS);
+            fclose($fp);
+
+            $x = 0;
+            $data['txt_OU'][] = $SAT_ENVIAR_filepath_OU_txt;
+            do {
+              if(!file_exists($SAT_ENVIAR_filepath_OU_txt)){
+                $x++;
+                if($x >= $count) throw new \Exception("Arquivo de Saída não encontrado", 1);
+                $data['txt_OUT_resp'][] = "[$x] File still Loading";
+                sleep(1);//Delays the program execution for 5seconds before code continues.
+              } else {
+                $x = $count;
+                $data['processed'][] = array(
+                  'sat_commands_id' => $_TXT['sat_commands_id'],
+                  'sale_id' => $sale_id,
+                  'retorno' => json_decode( read_last_line($SAT_ENVIAR_filepath_OU_txt) ),
+                );
+                $data['txt_OUT_resp'][] = "[$x] File Loaded!";
+              }
+            } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
+
           }
 
-          $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/SAT_ENVIAR.txt";
-          // $filepath_txt = "C:/ACBrMonitorPLUS/TXT/teste.txt";
-          // $filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
-          if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
-          $fp = fopen($filepath_txt,"wb");
-          fwrite($fp,$_COMMANDS);
-          fclose($fp);
+          // $SAT_ENVIAR_filepath_txt = "C:/ACBrMonitorPLUS/TXT/teste.txt";
+          // $SAT_ENVIAR_filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
 
           //gravar debug
-          $filepath_txt_debug = "C:/ACBrMonitorPLUS/TXT/SAT_ENVIAR_".date('Ymd_Hms');
-          if(file_exists($filepath_txt_debug)) $filepath_txt_debug = update_file_name($filepath_txt_debug);
-          $fp_debug = fopen($filepath_txt_debug,"wb");
-          fwrite($fp_debug,$_COMMANDS);
-          fclose($fp_debug);
-
+          // $filepath_txt_debug = "C:/ACBrMonitorPLUS/TXT/SAT_ENVIAR_".date('Ymd_Hms').".txt";
+          // if(file_exists($filepath_txt_debug)) $filepath_txt_debug = update_file_name($filepath_txt_debug);
+          // $fp_debug = fopen($filepath_txt_debug,"wb");
+          // fwrite($fp_debug,$_COMMANDS);
+          // fclose($fp_debug);
+          // $x = 0;
+          // $data['txt_OU'][] = $SAT_ENVIAR_filepath_OU_txt;
+          // do {
+          //   if(!file_exists($SAT_ENVIAR_filepath_OU_txt)){
+          //     $x++;
+          //     if($x >= $count) throw new \Exception("Arquivo de Saída não encontrado", 1);
+          //     $data['txt_OUT_resp'][] = "[$x] File still Loading";
+          //     sleep(1);//Delays the program execution for 5seconds before code continues.
+          //   } else {
+          //     $x = $count;
+          //     $data['retorno'][] = base64_encode( file_get_contents($SAT_ENVIAR_filepath_OU_txt) );
+          //     $data['txt_OUT_resp'][] = "[$x] File Loaded!";
+          //   }
+          // } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
 
           // header('Location: '.$file);
           // exit();
         }
       } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
       // FIM DE INICIALIZAR
+
+      // $x = 0;
+      // do {
+      //   if(!file_exists($filepath_txt_init)){
+      //     $x++;
+      //     if($x >= $count) throw new \Exception("Arquivo de Saída não encontrado", 1);
+      //     $data['txt_OUT_resp'][] = "[$x] File still Loading";
+      //     sleep(1);//Delays the program execution for 5seconds before code continues.
+      //   } else {
+      //     $x = $count;
+      //     $data['retorno'] = base64_encode( file_get_contents($SAT_ENVIAR_filepath_OU_txt) );
+      //     $data['txt_OUT_resp'][] = "[$x] File Loaded!";
+      //   }
+      // } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
 
 
 
@@ -179,7 +483,6 @@
     echo json_encode($data);
     exit;
   }
-
 
   function acbr_organize_sales(){
     $data = array();
