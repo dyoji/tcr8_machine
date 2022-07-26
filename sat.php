@@ -143,7 +143,7 @@
         $path_parts = pathinfo($file_path);
         // echo $path_parts['dirname'], "\n";
         // echo $path_parts['basename'], "\n";
-        // echo $path_parts['extension'], "\n";
+        echo $path_parts['extension'], "\n";
         // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
        // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
 
