@@ -660,7 +660,7 @@
       $nfe_filepath = $_DADOS['nfe_filepath'];
       $path_parts = pathinfo($nfe_filepath);
       $xml_path = $path_sync.$path_parts['basename'];
-      $data['xml_path'] = $xml.path;
+      $data['xml_path'] = $xml_path;
       $txtcomm = true;
       if($txtcomm) {
         $retorno = acbrCommandFile($sat_cmd,$xml_path,false);
