@@ -145,7 +145,7 @@
         // echo $path_parts['basename'], "\n";
         // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
        // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
-       if($path_parts['extension'] == 'xml') {
+       if(strtolower($path_parts['extension']) == 'xml') {
          $postData['file[' . $key . ']'] = curl_file_create(
              realpath($file_path),
              mime_content_type($file_path),
@@ -159,8 +159,8 @@
       }
 
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
-      // curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
+      // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
+      curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
       curl_setopt($ch, CURLOPT_TIMEOUT, 60); //86400 = 1 Day Timeout
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
