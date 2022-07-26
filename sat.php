@@ -162,12 +162,12 @@
       // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-      curl_setopt($ch, CURLOPT_TIMEOUT, 60); //86400 = 1 Day Timeout
+      curl_setopt($ch, CURLOPT_TIMEOUT, 600); //86400 = 1 Day Timeout
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
 
-      $response = curl_exec($ch);
+      $date['teste'] = $response = curl_exec($ch);
       if (curl_errno($ch)) {
          throw new \Exception("$ch Error Processing Request", 1);
       } else {
