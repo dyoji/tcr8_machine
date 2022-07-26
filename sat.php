@@ -167,7 +167,7 @@
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
 
-      $date['teste'] = $response = curl_exec($ch);
+      $data['teste'] = $response = curl_exec($ch);
       if (curl_errno($ch)) {
          throw new \Exception("$ch Error Processing Request", 1);
       } else {
