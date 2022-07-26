@@ -135,7 +135,7 @@
       $path_OU = $_DIRS['root']."TXT/OU/";
 
       $postData = ['somevar' => 'hello'];
-
+      $file_key = 0;
       foreach (get_files_from_folder($path_vendas) as $key => $file_path) {
         if($key > 15) continue;
 
@@ -146,11 +146,12 @@
         // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
        // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
        if(strtolower($path_parts['extension']) == 'xml') {
-         $postData['file[' . $key . ']'] = curl_file_create(
+         $postData['file[' . $file_key . ']'] = curl_file_create(
              realpath($file_path),
              mime_content_type($file_path),
              basename($file_path)
          );
+         $file_key++;
          $data['Records'][] = $file_path;
        } else {
          $data['Records_invalid'][] = $file_path;
