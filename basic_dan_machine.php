@@ -121,6 +121,9 @@
       mkdir($folder, 0777, true);
       @chmod($folder, 0777);
       umask($old);
+      return true;
+    } else {
+      return false;
     }
   }
 

@@ -19,6 +19,30 @@
 
   tcr8_function();
 
+  function make_dirs(){
+    $data = array();
+    try{
+      if( empty($_FILES['data']) ) throw new Exception( 'Não foi encontrado nenhum arquivo texto com dados de variável' );
+      $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']),true);
+      $data['_DADOS'] = $_DADOS;
+
+      $_DIRS = $_DADOS['dirs'];
+      foreach ($_DIRS as $key => $_DIR) {
+        $data['dirs'][$_DIR] = new_folder($_DIR);
+        // code...
+      }
+
+      $data['success'] = true;
+      $data['message'] = 'Diretórios criados com sucesso';
+    } catch (Exception $e){
+      $data['success'] = false;
+      $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+  }
+
   function read_last_line($filepath){
     $line = '';
     $f = fopen($filepath, 'r');
@@ -125,6 +149,7 @@
       $data['store'] = $_STORE = $_DADOS['store_obj'];
       $path_root = $_DIRS['root'];
       $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_cancelamentos_sync = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/sync/";
       $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
       $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
       $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
@@ -137,7 +162,10 @@
 
       $postData = ['somevar' => 'hello'];
       $file_key = 0;
-      foreach (get_files_from_folder($path_vendas) as $key => $file_path) {
+
+      $files_arr = get_files_from_folder($path_vendas);
+      $files_arr = array_merge($files_arr,get_files_from_folder($path_cancelamentos));
+      foreach ($files_arr as $key => $file_path) {
         if($key > 15) continue;
 
         $file_data = array();
@@ -161,8 +189,8 @@
       }
 
       $ch = curl_init();
-      // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
-      curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
+      curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
+      // curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
       curl_setopt($ch, CURLOPT_TIMEOUT, 600); //86400 = 1 Day Timeout
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
@@ -179,7 +207,9 @@
         foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
           if($_UPLOAD['success']) {
             new_folder($path_sync);
+            new_folder($path_cancelamentos_sync);
             if(file_exists( $path_vendas . $_UPLOAD['name'] )) rename($path_vendas . $_UPLOAD['name'],$path_sync . $_UPLOAD['name']);
+            if(file_exists( $path_cancelamentos . $_UPLOAD['name'] )) rename($path_cancelamentos . $_UPLOAD['name'],$path_cancelamentos_sync . $_UPLOAD['name']);
           }
         }
       }
@@ -198,7 +228,6 @@
     echo json_encode($data);
     exit;
   }
-
 
   function acbr_organizer(){
     //é o mais novo organizador 22/07/2022
