@@ -104,6 +104,29 @@
     return $resposta;
   }
 
+  function acbrCommandPrintCancel($command,$file_original,$file_cancel,$sc = false){
+    extract($GLOBALS);
+    $crlf = chr(13).chr(10).chr(46).chr(13).chr(10);
+    $cmd = $command.'('.$file_original.','.$file_cancel.')'.$crlf;
+
+    if($sc) {
+      $sc->send($cmd);
+      $resposta = $sc->recv();
+    } else {
+      $filepath_txt = "C:/ACBrMonitorPLUS/TXT/IN/teste.txt";
+      // $filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
+      if(file_exists($filepath_txt)) $filepath_txt = update_file_name($filepath_txt);
+      // $data['nfe_filepath'] = $filepath_txt;
+      $fp = fopen($filepath_txt,"wb");
+      fwrite($fp,$cmd);
+      fclose($fp);
+
+      $resposta = false;
+    }
+    return $resposta;
+  }
+
+
   function acbr_savetxt(){
     extract($GLOBALS);
     $data = array();
@@ -678,6 +701,7 @@
       $data['store'] = $_STORE = $_DADOS['store_obj'];
       $path_root = $_DIRS['root'];
       $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
+      $path_cancelamentos_sync = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/sync/";
       $path_enviados = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviados']."/"."/".$_STORE['cnpj']."/";
       $path_enviar = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['enviar']."/";
       $path_saida = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['saida']."/";
@@ -691,13 +715,26 @@
       $xml_path = $path_sync.$path_parts['basename'];
       $data['xml_path'] = $xml_path;
       $txtcomm = true;
-      if($txtcomm) {
-        $retorno = acbrCommandFile($sat_cmd,$xml_path,false);
-      } else {
-        $sc = new ClientSocket();
-        $sc->open($acbr_ip,$acbr_port);
-        $response = $sc->recv();
-        $retorno = acbrCommandFile($sat_cmd,$xml_path,$sc);
+      if(strpos($sat_cmd, "ImprimirExtratoCancelamento") !== false){ //se for cancelamento
+        $nfe_cancel_filename = $_DADOS['nfe_cancel_filename'];
+        $xml_cancel_path = $path_cancelamentos_sync.$nfe_cancel_filename;
+        if($txtcomm) {
+          $retorno = acbrCommandPrintCancel($sat_cmd,$xml_path,$xml_cancel_path,false);
+        } else {
+          $sc = new ClientSocket();
+          $sc->open($acbr_ip,$acbr_port);
+          $response = $sc->recv();
+          $retorno = acbrCommandPrintCancel($sat_cmd,$xml_path,$xml_cancel_path,$sc);
+        }
+      } else { // se for qualquer outro comando
+        if($txtcomm) {
+          $retorno = acbrCommandFile($sat_cmd,$xml_path,false);
+        } else {
+          $sc = new ClientSocket();
+          $sc->open($acbr_ip,$acbr_port);
+          $response = $sc->recv();
+          $retorno = acbrCommandFile($sat_cmd,$xml_path,$sc);
+        }
       }
 
       $filename = "log_".date('Ymd_Hms');
