@@ -215,8 +215,8 @@
       // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-      curl_setopt($ch, CURLOPT_TIMEOUT, 600); //86400 = 1 Day Timeout
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
+      curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
+      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
 
