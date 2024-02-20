@@ -170,6 +170,7 @@
 
       $data['dirs'] = $_DIRS = $_DADOS['dirs'];
       $data['store'] = $_STORE = $_DADOS['store_obj'];
+      $data['satpc_url_xml_upload'] = $satpc_url_xml_upload = $_DADOS['satpc_url_xml_upload'];
       $path_root = $_DIRS['root'];
       $path_cancelamentos = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/";
       $path_cancelamentos_sync = $_DIRS['root'].$_DIRS['xml']."/".$_DIRS['cancelamentos']."/".$_STORE['cnpj']."/sync/";
@@ -213,7 +214,7 @@
 
       $ch = curl_init();
       // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
-      curl_setopt($ch, CURLOPT_URL, 'https://infinivm.tcr8.co/actions/nfephp.php?action=xml_upload');
+      curl_setopt($ch, CURLOPT_URL, $satpc_url_xml_upload);
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
       curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
