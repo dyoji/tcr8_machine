@@ -213,7 +213,7 @@
 
       $ch = curl_init();
       // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
-      curl_setopt($ch, CURLOPT_URL, 'https://vm.infini.tcr8.com.br:444/actions/nfephp.php?action=xml_upload');
+      curl_setopt($ch, CURLOPT_URL, 'https://infinivm.tcr8.co/actions/nfephp.php?action=xml_upload');
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
       curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
@@ -329,8 +329,8 @@
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, 'https://fl.curumim.tcr8.com.br/actions/nfe.php?action=xml_upload');
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 86400); // 1 Day Timeout
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60000);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 1 Day Timeout
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
 
@@ -473,33 +473,6 @@
             } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
 
           }
-
-          // $SAT_ENVIAR_filepath_txt = "C:/ACBrMonitorPLUS/TXT/teste.txt";
-          // $SAT_ENVIAR_filepath_txt = isset($_DADOS['sat_txtpath']) ? $_DADOS['sat_txtpath'] : "C:\ACBrMonitorPLUS\TXT\IN";
-
-          //gravar debug
-          // $filepath_txt_debug = "C:/ACBrMonitorPLUS/TXT/SAT_ENVIAR_".date('Ymd_Hms').".txt";
-          // if(file_exists($filepath_txt_debug)) $filepath_txt_debug = update_file_name($filepath_txt_debug);
-          // $fp_debug = fopen($filepath_txt_debug,"wb");
-          // fwrite($fp_debug,$_COMMANDS);
-          // fclose($fp_debug);
-          // $x = 0;
-          // $data['txt_OU'][] = $SAT_ENVIAR_filepath_OU_txt;
-          // do {
-          //   if(!file_exists($SAT_ENVIAR_filepath_OU_txt)){
-          //     $x++;
-          //     if($x >= $count) throw new \Exception("Arquivo de Saída não encontrado", 1);
-          //     $data['txt_OUT_resp'][] = "[$x] File still Loading";
-          //     sleep(1);//Delays the program execution for 5seconds before code continues.
-          //   } else {
-          //     $x = $count;
-          //     $data['retorno'][] = base64_encode( file_get_contents($SAT_ENVIAR_filepath_OU_txt) );
-          //     $data['txt_OUT_resp'][] = "[$x] File Loaded!";
-          //   }
-          // } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
-
-          // header('Location: '.$file);
-          // exit();
         }
       } while($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
       // FIM DE INICIALIZAR
