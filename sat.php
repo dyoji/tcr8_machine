@@ -237,14 +237,13 @@
             }
           }
         }
-
+        curl_close($ch);
         $data['message'] = 'Upload feito com sucesso';
       } else {
         $data['message'] = 'Não tem upload para fazer';
       }
 
 
-      curl_close($ch);
 
       $data['success'] = true;
       $data['close_all'] = false;
