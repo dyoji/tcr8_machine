@@ -211,39 +211,44 @@
        }
         // code...
       }
-
-      $ch = curl_init();
-      // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
-      curl_setopt($ch, CURLOPT_URL, $satpc_url_xml_upload);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-      curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
-
-      $data['teste'] = $response = curl_exec($ch);
-      if (curl_errno($ch)) {
-         throw new \Exception("$ch Error Processing Request", 1);
-      } else {
-         $data['uploads'] = json_decode($response,true);
-      }
-      if(isset($data['uploads']['files'])) {
-        foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
-          if($_UPLOAD['success']) {
-            new_folder($path_sync);
-            new_folder($path_cancelamentos_sync);
-            if(file_exists( $path_vendas . $_UPLOAD['name'] )) rename($path_vendas . $_UPLOAD['name'],$path_sync . $_UPLOAD['name']);
-            if(file_exists( $path_cancelamentos . $_UPLOAD['name'] )) rename($path_cancelamentos . $_UPLOAD['name'],$path_cancelamentos_sync . $_UPLOAD['name']);
+      if(isset($data['Records']) && count($data['Records'])>0){
+        $ch = curl_init();
+        // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfephp.php?action=xml_upload');
+        curl_setopt($ch, CURLOPT_URL, $satpc_url_xml_upload);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+  
+        $data['teste'] = $response = curl_exec($ch);
+        if (curl_errno($ch)) {
+           throw new \Exception("$ch Error Processing Request", 1);
+        } else {
+           $data['uploads'] = json_decode($response,true);
+        }
+        if(isset($data['uploads']['files'])) {
+          foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
+            if($_UPLOAD['success']) {
+              new_folder($path_sync);
+              new_folder($path_cancelamentos_sync);
+              if(file_exists( $path_vendas . $_UPLOAD['name'] )) rename($path_vendas . $_UPLOAD['name'],$path_sync . $_UPLOAD['name']);
+              if(file_exists( $path_cancelamentos . $_UPLOAD['name'] )) rename($path_cancelamentos . $_UPLOAD['name'],$path_cancelamentos_sync . $_UPLOAD['name']);
+            }
           }
         }
+
+        $data['message'] = 'Upload feito com sucesso';
+      } else {
+        $data['message'] = 'Não tem upload para fazer';
       }
+
 
       curl_close($ch);
 
       $data['success'] = true;
       $data['close_all'] = false;
       $data['reload']    = false;
-      $data['message'] = '';
     } catch (Exception $e){
       $data['success'] = false;
       $data['message'] = $e->getMessage();
