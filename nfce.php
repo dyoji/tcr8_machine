@@ -48,31 +48,36 @@ function read_last_line($filepath)
 {
     $line = '';
     $f = fopen($filepath, 'r');
+    if (!$f) return '';
+
     $cursor = -1;
     fseek($f, $cursor, SEEK_END);
     $char = fgetc($f);
-    /**
-     * Trim trailing newline chars of the file
-     */
+
+    // Se o arquivo estiver vazio
+    if ($char === false) {
+        fclose($f);
+        return '';
+    }
+
+    // 🔹 Ignora quebras de linha no final (se existirem)
     while ($char === "\n" || $char === "\r") {
-        fseek($f, $cursor--, SEEK_END);
+        if (fseek($f, --$cursor, SEEK_END) === -1) break;
         $char = fgetc($f);
     }
-    /**
-     * Read until the start of file or first newline char
-     */
+
+    // 🔹 Agora lê até o início do arquivo ou até encontrar nova quebra
     while ($char !== false && $char !== "\n" && $char !== "\r") {
-        /**
-         * Prepend the new char
-         */
         $line = $char . $line;
-        fseek($f, $cursor--, SEEK_END);
+        if (fseek($f, --$cursor, SEEK_END) === -1) break;
         $char = fgetc($f);
     }
 
     fclose($f);
-    return $line;
+    return trim($line);
 }
+
+
 
 function acbrCommand($cmd, $sc = false)
 {
@@ -189,9 +194,9 @@ function upload_xmls()
         $path_vendas = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/";
         $path_sync = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/sync/";
         $path_xml = $_DIRS['root'] . $_DIRS['xml'] . "/";
-
-        $path_IN = $_DIRS['root'] . "TXT/IN/";
-        $path_OU = $_DIRS['root'] . "TXT/OU/";
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
 
         $postData = ['somevar' => 'hello'];
         $file_key = 0;
@@ -230,14 +235,30 @@ function upload_xmls()
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
 
-            $data['teste'] = $response = curl_exec($ch);
+            $response = curl_exec($ch);
+
+
+
             if (curl_errno($ch)) {
-                throw new \Exception("$ch Error Processing Request", 1);
-            } else {
-                $data['uploads'] = json_decode($response, true);
+                throw new Exception("Erro CURL: " . curl_error($ch));
             }
-            if (isset($data['uploads']['files'])) {
-                foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
+            $upload = json_decode($response, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($upload['success']) && $upload['success'] === true) {
+                $data['uploads'][] = $upload;
+                // ✅ Sucesso
+                // debug("Upload OK: " . ($upload['message'] ?? ''));
+            } else {
+                // ❌ Falha — JSON inválido ou success=false
+                $data['uploads'][] = [
+                    'error' => true,
+                    'response' => $response,
+                    'json_error' => json_last_error_msg()
+                ];
+                // debug("Erro no upload: " . substr($response, 0, 200));
+            }
+
+            if (isset($upload['files'])) {
+                foreach ($upload['files'] as $key => $_UPLOAD) {
                     if ($_UPLOAD['success']) {
                         new_folder($path_sync);
                         new_folder($path_cancelamentos_sync);
@@ -282,9 +303,9 @@ function acbr_organizer()
         $path_saida = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_DIRS['saida'] . "/";
         $path_vendas = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_DIRS['vendas'] . "/" . $_STORE['cnpj'] . "/";
         $path_xml = $_DIRS['root'] . $_DIRS['xml'] . "/";
-
-        $path_IN = $_DIRS['root'] . "TXT/IN/";
-        $path_OU = $_DIRS['root'] . "TXT/OU/";
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
 
         foreach (get_files_from_folder($path_vendas) as $key => $file_path) {
             $file_data = array();
@@ -404,7 +425,138 @@ function acbr_after_save_organized()
     exit;
 }
 
+function CriarEnviarNFe($_NFCE_OPTS)
+{
+    $crlf = chr(13) . chr(10) . chr(46) . chr(13) . chr(10);
+
+    $params = [];
+    // 1) cIniNFe (sempre string com aspas)
+    $params[] = '"' . $_NFCE_OPTS['cIniNFe'] . '"';
+    // 2) nLote
+    $params[] = (int)$_NFCE_OPTS['nLote'];
+
+    // 3) bImprimeDANFE
+    $params[] = (int)$_NFCE_OPTS['bImprimeDANFE'];
+
+    // 4) bSincrono
+    $params[] = (int)$_NFCE_OPTS['bSincrono'];
+
+    // 5) cImpressora (só entra se NÃO for false)
+    if ($_NFCE_OPTS['cImpressora'] !== false) {
+        $params[] = '"' . $_NFCE_OPTS['cImpressora'] . '"';
+    }
+
+    // Monta o comando final
+    $_COMMANDS = 'NFE.CriarEnviarNFe(' . implode(',', $params) . ');' . $crlf;
+    return $_COMMANDS;
+}
+
 function nfce_acbr_emit()
+{
+    extract($GLOBALS);
+    $data = array();
+    try {
+        if (empty($_FILES['data'])) throw new Exception('Não foi encontrado nenhum arquivo texto com dados de variável');
+        $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']), true);
+        $data['_DADOS'] = $_DADOS;
+        $acbr_ip = isset($_DADOS['acbr_ip']) ? $_DADOS['acbr_ip'] : "127.0.0.1";
+        $acbr_port = isset($_DADOS['acbr_port']) ? $_DADOS['acbr_port'] : "3434";
+        $crlf = chr(13) . chr(10) . chr(46) . chr(13) . chr(10);
+
+        $acbr_inis = $_DADOS['acbr_inis'];
+        $_NFCeACBR = $_DADOS['NFCeACBR'];
+        $_DIRS = $_NFCeACBR['dirs'];
+
+        //Define as Pastas utilizadas para emissão do NFCe, utiliza o new_folder para criar caso não exista.
+        $path_root = $_DIRS['root'];
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
+        $path_NFCe_INI =  $_DIRS['root'] . $_DIRS['path_NFCe_INI'] . "/";
+        new_folder($path_IN);
+        new_folder($path_OU);
+        new_folder($path_NFCe_INI);
+        // $deleted = unlink($SAT_ENVIAR_filepath_txt);
+
+        foreach ($acbr_inis as $key => $_INI) {
+            $sale_id = $_INI['sale_id'];
+            $count = 10;
+            $filename = pathinfo($_INI['nfe_filename'], PATHINFO_FILENAME);
+
+            // Arquivo TXT do COMANDO para emissão do NFCe_INI
+            $NFCe_ENVIAR_filepath_IN_txt = $path_IN . $filename . ".txt";
+            // Arquivo TXT contendo as informações da comunicação com a Sefaz
+            $NFCe_ENVIAR_filepath_OU_txt = $path_OU . $filename . "-resp.txt";
+            // Arquivo TXT ou INI que contenha as informações da NFCe
+            $NFCe_ENVIAR_filepath_INI = $path_NFCe_INI . $_INI['nfe_filename'];
+            // Não é para ter duplicado, mas verifica para não sobrescever, se existir, cria um novo nome e atualiza a Variável
+            if (file_exists($NFCe_ENVIAR_filepath_INI)) $NFCe_ENVIAR_filepath_INI = update_file_name($NFCe_ENVIAR_filepath_INI);
+
+            // Adiciona os Conteúdos da nota Fiscal (NFCe_INI) e Salva
+            $nfce_content  = base64_decode($_INI['nfe_text']);
+            $fp = fopen($NFCe_ENVIAR_filepath_INI, "wb");
+            fwrite($fp, $nfce_content);
+            fclose($fp);
+            $_INI['message'] = 'INI salvo localmente e pronto para gerar o NFCe';
+            $_INI['path'] = $NFCe_ENVIAR_filepath_INI;
+            $data['Records'][] = $_INI;
+
+            // Cria o COMANDO que monta o XML e envia para a Sefaz o Arquivo NFCe_INI, na pasta onde le os comandos em TXT
+            $_NFCE_OPTS = [
+                "cIniNFe" => $NFCe_ENVIAR_filepath_INI,
+                "nLote" => 1,
+                "bImprimeDANFE" => $_NFCeACBR['auto_print'] == false ? 0 : 1, //Imprime Automaticamente após autorização da Sefaz
+                "bSincrono" => 1,
+                "cImpressora" => false,
+            ];
+
+            $_COMMANDS = CriarEnviarNFe($_NFCE_OPTS);
+
+            // $_COMMANDS = 'NFE.CriarEnviarNFe(' . $NFCe_ENVIAR_filepath_INI . ',1,1,1);' . $crlf;
+            if (file_exists($NFCe_ENVIAR_filepath_IN_txt)) $NFCe_ENVIAR_filepath_IN_txt = update_file_name($NFCe_ENVIAR_filepath_IN_txt);
+            $fp = fopen($NFCe_ENVIAR_filepath_IN_txt, "wb");
+            fwrite($fp, $_COMMANDS);
+            fclose($fp);
+
+            // Apenas para FINs de Debug, a gente retorna o path dos arquivos de leitura IN e OUT
+            $data['txt_IN'][] = $NFCe_ENVIAR_filepath_IN_txt;
+            $data['txt_OU'][] = $NFCe_ENVIAR_filepath_OU_txt;
+
+            // Aqui o sistema aguarda por $count Segundos o retorno do arquivo -resp em txt_ou, no NFCe é praticamente imediato, essa função foi criada por conta do SAT que demorava devido ao equipamento SAT.
+            $x = 0;
+            do {
+                if (!file_exists($NFCe_ENVIAR_filepath_OU_txt)) {
+                    $x++;
+                    if ($x >= $count) throw new \Exception("Arquivo de Saída não encontrado", 1);
+                    $data['txt_OUT_resp'][] = "[$x] File still Loading";
+                    sleep(1); //Delays the program execution for 5seconds before code continues.
+                } else {
+                    $x = $count;
+                    $data['processed'][] = array(
+                        // 'sat_commands_id' => $_INI['sat_commands_id'],
+                        'sale_id' => $sale_id,
+                        'retorno' => json_decode(read_last_line($NFCe_ENVIAR_filepath_OU_txt)),
+                    );
+                    $data['txt_OUT_resp'][] = "[$x] File Loaded!";
+                }
+            } while ($x < $count); // this kind of regulates how long the loop should last to avoid maximum execution timeout error
+
+        }
+
+        $data['success'] = true;
+        $data['close_all'] = false;
+        $data['reload']    = false;
+        $data['message'] = '';
+    } catch (Exception $e) {
+        $data['success'] = false;
+        $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+}
+
+function nfce_acbr_cmd_exec()
 {
     extract($GLOBALS);
     $data = array();
@@ -423,42 +575,46 @@ function nfce_acbr_emit()
         $path_root = "C:/ACBrMonitorPLUS/";
         $path_IN = $path_root . "TXT/IN/";
         $path_OU = $path_root . "TXT/OU/";
+        // $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        // $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        // $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
+        $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+
+        $path_xml = $_DIRS['root'] . $_DIRS['xml'] . "/";
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
+
         // $deleted = unlink($SAT_ENVIAR_filepath_txt);
-
-        $_COMMANDS_INIT = 'SAT.Inicializar();';
-        $filepath_SAT_INIT_IN_txt = $path_IN . "SAT_INIT.txt";
-        $filepath_SAT_INIT_OU_txt = $path_OU . "SAT_INIT-resp.txt";
-        $deleted = @unlink($filepath_SAT_INIT_OU_txt);
-
-        // if (file_exists($filepath_SAT_INIT_IN_txt)) $filepath_SAT_INIT_IN_txt = update_file_name($filepath_SAT_INIT_IN_txt);
-        // $fp = fopen($filepath_SAT_INIT_IN_txt, "wb");
-        // fwrite($fp, $_COMMANDS_INIT);
-        // fclose($fp);
-
 
         foreach ($acbr_inis as $key => $_INI) {
             $sale_id = $_INI['sale_id'];
             $count = 10;
-            $NFCe_ENVIAR_filepath_IN_txt = $path_IN . "ACBR_ENVIAR_" . $sale_id . ".txt";
-            $NFCe_ENVIAR_filepath_OU_txt = $path_OU . "ACBR_ENVIAR_" . $sale_id . "-resp.txt";
+            $filename = pathinfo($_INI['nfe_filename'], PATHINFO_FILENAME);
+
+            $NFCe_ENVIAR_filepath_IN_txt = $path_IN . $filename . ".txt";
+            $NFCe_ENVIAR_filepath_OU_txt = $path_OU . $filename . "-resp.txt";
+
+
 
             $_INI['path'] = $filepath_txt . $_INI['nfe_filename'];
             if (file_exists($_INI['path'])) $_INI['path'] = update_file_name($_INI['path']);
             $nfce_content  = base64_decode($_INI['nfe_text']);
-            $fp = fopen($_INI['path'], "wb");
+            $fp = fopen($NFCe_ENVIAR_filepath_IN_txt, "wb");
+
             fwrite($fp, $nfce_content);
             fclose($fp);
             $_INI['message'] = 'INI salvo localmente e pronto para gerar o NFCe';
             $data['Records'][] = $_INI;
-            $_COMMANDS = 'NFE.CriarEnviarNFe(' . $_INI['path'] . ',1,1,1);' . $crlf;
+            // $_COMMANDS = 'NFE.CriarEnviarNFe(' . $_INI['path'] . ',1,1,1);' . $crlf;
 
-            if (file_exists($NFCe_ENVIAR_filepath_IN_txt)) $NFCe_ENVIAR_filepath_IN_txt = update_file_name($NFCe_ENVIAR_filepath_IN_txt);
-            $fp = fopen($NFCe_ENVIAR_filepath_IN_txt, "wb");
-            fwrite($fp, $_COMMANDS);
-            fclose($fp);
+            // if (file_exists($NFCe_ENVIAR_filepath_IN_txt)) $NFCe_ENVIAR_filepath_IN_txt = update_file_name($NFCe_ENVIAR_filepath_IN_txt);
+            // $fp = fopen($NFCe_ENVIAR_filepath_IN_txt, "wb");
+            // fwrite($fp, $_COMMANDS);
+            // fclose($fp);
 
             $x = 0;
-
+            $data['txt_IN'][] = $NFCe_ENVIAR_filepath_IN_txt;
             $data['txt_OU'][] = $NFCe_ENVIAR_filepath_OU_txt;
             do {
                 if (!file_exists($NFCe_ENVIAR_filepath_OU_txt)) {
@@ -469,7 +625,7 @@ function nfce_acbr_emit()
                 } else {
                     $x = $count;
                     $data['processed'][] = array(
-                        'sat_commands_id' => $_INI['sat_commands_id'],
+                        // 'sat_commands_id' => $_INI['sat_commands_id'],
                         'sale_id' => $sale_id,
                         'retorno' => json_decode(read_last_line($NFCe_ENVIAR_filepath_OU_txt)),
                     );
@@ -484,6 +640,173 @@ function nfce_acbr_emit()
         $data['close_all'] = false;
         $data['reload']    = false;
         $data['message'] = '';
+    } catch (Exception $e) {
+        $data['success'] = false;
+        $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+}
+
+function nfce_read_resps()
+{
+    // Aceita UPLOAD dos XMLs de tcr8_machine
+    extract($GLOBALS);
+    $data = array();
+    try {
+        if (empty($_FILES['data'])) throw new Exception('Não foi encontrado nenhum arquivo texto com dados de variável');
+        $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']), true);
+
+        $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+        $data['store'] = $_STORE = $_DADOS['store_obj'];
+        $data['localhost'] = $localhost = $_DADOS['localhost'];
+        $data['pc_url_xml_upload'] = $pc_url_xml_upload = $_DADOS['pc_url_xml_upload'];
+        $path_root = $_DIRS['root'];
+        // C:\ACBrMonitorPLUS\TXT\OU
+
+        $path_cancelamentos = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFe/";
+        $path_cancelamentos_sync = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFe/sync/";
+        $path_vendas = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/";
+        $path_sync = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/sync/";
+        $path_xml = $_DIRS['root'] . $_DIRS['xml'] . "/";
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . "/";
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . "/";
+        $path_OU_sync = $_DIRS['root'] . $_DIRS['path_OU'] . "/sync/";
+
+        $postData = ['somevar' => 'hello'];
+        $file_key = 0;
+
+        // $files_arr = get_files_from_folder($path_OU);
+        $files_arr = get_files_from_folder($path_OU, 'txt', '/^\d+_\d+_\d+-resp\.txt$/');
+        $files_arr = array_merge($files_arr, get_files_from_folder($path_vendas));
+        $files_arr = array_merge($files_arr, get_files_from_folder($path_cancelamentos));
+
+        foreach ($files_arr as $key => $file_path) {
+            // $path_parts = pathinfo($file_path);
+            // $data['processed'][] = array(
+            //     'file' => $path_parts['basename'],
+            //     // 'sat_commands_id' => $_INI['sat_commands_id'],
+            //     // 'sale_id' => $sale_id,
+            //     'retorno' => json_decode(read_last_line($file_path)),
+            // );
+            // $data['txt_OUT_resp'][] = "[$x] File Loaded!";
+
+            // continue;
+            if ($key > 15) continue;
+
+            $file_data = array();
+            $path_parts = pathinfo($file_path);
+            // echo $path_parts['dirname'], "\n";
+            // echo $path_parts['basename'], "\n";
+            // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
+            // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
+            $ext = strtolower($path_parts['extension'] ?? '');
+            if (in_array($ext, ['txt', 'xml'])) {
+                $postData['file[' . $file_key . ']'] = curl_file_create(
+                    realpath($file_path),
+                    mime_content_type($file_path),
+                    basename($file_path)
+                );
+                $file_key++;
+                $data['Records'][] = $file_path;
+            } else {
+                $data['Records_invalid'][] = $file_path;
+            }
+            // code...
+        }
+        if (isset($data['Records']) && count($data['Records']) > 0) {
+            $ch = curl_init();
+            // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfce.php?action=nfce_xml_upload');
+            curl_setopt($ch, CURLOPT_URL, $pc_url_xml_upload);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+
+            $data['teste'][] = $response = curl_exec($ch);
+            if (curl_errno($ch)) {
+                throw new \Exception("$ch Error Processing Request", 1);
+            } else {
+                $data['uploads'] = json_decode($response, true);
+            }
+            if (isset($data['uploads']['files'])) {
+                foreach ($data['uploads']['files'] as $key => $_UPLOAD) {
+                    if ($_UPLOAD['success']) {
+                        new_folder($path_sync);
+                        new_folder($path_cancelamentos_sync);
+                        new_folder($path_OU_sync);
+                        if (file_exists($path_vendas . $_UPLOAD['name'])) rename($path_vendas . $_UPLOAD['name'], $path_sync . $_UPLOAD['name']);
+                        if (file_exists($path_cancelamentos . $_UPLOAD['name'])) rename($path_cancelamentos . $_UPLOAD['name'], $path_cancelamentos_sync . $_UPLOAD['name']);
+                        if (file_exists($path_OU . $_UPLOAD['name'])) rename($path_OU . $_UPLOAD['name'], $path_OU_sync . $_UPLOAD['name']);
+                    }
+                }
+            }
+            curl_close($ch);
+            $data['message'] = 'Upload feito com sucesso';
+        } else {
+            $data['message'] = 'Não tem upload para fazer';
+        }
+
+        $data['success'] = true;
+        $data['close_all'] = false;
+        $data['reload']    = false;
+    } catch (Exception $e) {
+        $data['success'] = false;
+        $data['message'] = $e->getMessage();
+    }
+    $data['msg'] = $data['message'];
+    echo json_encode($data);
+    exit;
+}
+
+function nfce_read_debug()
+{
+    // Aceita UPLOAD dos XMLs de tcr8_machine
+    extract($GLOBALS);
+    $data = array();
+    try {
+        if (empty($_FILES['data'])) throw new Exception('Não foi encontrado nenhum arquivo texto com dados de variável');
+        $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']), true);
+
+        $data['dirs'] = $_DIRS = $_DADOS['dirs'];
+        $data['store'] = $_STORE = $_DADOS['store_obj'];
+        $data['localhost'] = $localhost = $_DADOS['localhost'];
+        $data['pc_url_xml_upload'] = $pc_url_xml_upload = $_DADOS['pc_url_xml_upload'];
+        $path_root = $_DIRS['root'];
+        // C:\ACBrMonitorPLUS\TXT\OU
+
+        $path_cancelamentos = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFe/";
+        $path_cancelamentos_sync = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFe/sync/";
+        $path_vendas = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/";
+        $path_sync = $_DIRS['root'] . $_DIRS['xml'] . "/" . $_STORE['cnpj'] . "/NFCe/sync/";
+        $path_xml = $_DIRS['root'] . $_DIRS['xml'] . "/";
+        $path_IN = $_DIRS['root'] . $_DIRS['path_IN'] . '/' . 'debug/';
+        $path_OU = $_DIRS['root'] . $_DIRS['path_OU'] . '/' . 'debug/';
+        $path_OU_sync = $_DIRS['root'] . "TXT/OU/sync/";
+
+        $postData = ['somevar' => 'hello'];
+        $file_key = 0;
+
+        // $files_arr = get_files_from_folder($path_OU);
+        // $files_arr = get_files_from_folder($path_OU, 'txt', '/^\d+_\d+_\d+-resp\.txt$/');
+        $files_arr = get_files_from_folder($path_OU, 'txt');
+        foreach ($files_arr as $key => $file_path) {
+            $path_parts = pathinfo($file_path);
+            $data['processed'][] = array(
+                'file' => $path_parts['basename'],
+                // 'sat_commands_id' => $_INI['sat_commands_id'],
+                // 'sale_id' => $sale_id,
+                'retorno' => json_decode(read_last_line($file_path)),
+                'last_line' => (read_last_line($file_path)),
+            );
+        }
+
+        $data['message'] = 'Debug Completo';
+        $data['success'] = true;
+        $data['close_all'] = false;
+        $data['reload']    = false;
     } catch (Exception $e) {
         $data['success'] = false;
         $data['message'] = $e->getMessage();
@@ -707,50 +1030,11 @@ function acbr_cmd()
         $fp = fopen($filepath_txt, "wb");
         fwrite($fp, $retorno);
         fclose($fp);
+
+
         // if(!$retorno) throw new \Exception("Error Processing Request", 1);
         $data['retorno'] = base64_encode($retorno);
 
-        $data['success'] = true;
-        $data['close_all'] = false;
-        $data['reload']    = false;
-        $data['message'] = 'NFE via PHP Emitido';
-    } catch (Exception $e) {
-        $data['success'] = false;
-        $data['message'] = $e->getMessage();
-    }
-    $data['msg'] = $data['message'];
-    echo json_encode($data);
-    exit;
-}
-
-function generate_sat()
-{
-    extract($GLOBALS);
-    $data = array();
-    try {
-        if (empty($_FILES['data'])) throw new Exception('Não foi encontrado nenhum arquivo texto com dados de variável');
-        $_DADOS = json_decode(file_get_contents($_FILES['data']['tmp_name']), true);
-
-        $filepath_temp = $_DADOS['SATPHP']['sevenbuilds']['proc_dir'] . "/myText.temp";
-        $filepath_txt = $_DADOS['SATPHP']['sevenbuilds']['proc_dir'] . "/" . $_DADOS['nfe_filename'];
-        $nfse_content  = $_DADOS['nfe_text'];
-        // DEBUG
-        // $nfse_content .= "\n".$_DADOS['SATPHP']['sevenbuilds']['proc_dir'];
-        // $nfse_content .= "\n".$_DADOS['SATPHP']['sevenbuilds']['xml_dir'];
-        // END OF DEBUG
-        $fp = fopen($filepath_temp, "wb");
-        fwrite($fp, $nfse_content);
-        fclose($fp);
-        rename($filepath_temp, $filepath_txt);
-        // print_r($files1);
-        // print_r($files2);
-        // echo "<br>";
-        // $fh = fopen('C:/seven/teste.txt','r');
-        // while ($line = fgets($fh)) {
-        //   // <... Do your work with the line ...>
-        //   echo($line);
-        // }
-        // fclose($fh);
         $data['success'] = true;
         $data['close_all'] = false;
         $data['reload']    = false;

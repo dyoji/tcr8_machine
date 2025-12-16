@@ -79,27 +79,38 @@ function array_get_by_array($arr, $fetch)
   return $arr;
 }
 
-function get_files_from_folder($dir, $ext = '*')
+function get_files_from_folder($dir, $ext = '*', $filter = false)
 {
   new_folder($dir);
-
   $cdir = scandir($dir);
-  $return = array();
-  foreach ($cdir as $key => $value) {
-    if (!in_array($value, array(".", ".."))) {
-      if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
-        // é Diretório, não faz nada;
-        // $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
-      } else {
-        $file_parts = pathinfo($value);
-        $basename  = $file_parts['basename'];
-        $filename  = $file_parts['filename'];
-        $extension = $file_parts['extension'];
-        $dirname   = $file_parts['dirname'];
-        $fullpath = $dir . "/" . $value;
-        if ($ext == '*') $return[] = $fullpath;
-        elseif ($ext == $extension) $return[] = $fullpath;
-      }
+  $return = [];
+
+  foreach ($cdir as $value) {
+    if (in_array($value, [".", ".."])) continue;
+
+    $fullpath = $dir . "/" . $value;
+    if (is_dir($fullpath)) continue;
+
+    $file_parts = pathinfo($value);
+    $extension  = $file_parts['extension'] ?? '';
+    $basename   = $file_parts['basename'];
+    $extension = $file_parts['extension'];
+    $dirname   = $file_parts['dirname'];
+
+    // Filtra pela extensão
+    if ($ext !== '*' && strtolower($extension) !== strtolower($ext)) continue;
+
+    // Se o filtro for regex, aplica ele
+    if (is_string($filter) && @preg_match($filter, $basename)) {
+      $return[] = $fullpath;
+    }
+    // Se o filtro for boolean false (sem filtro), inclui tudo
+    elseif ($filter === false) {
+      $return[] = $fullpath;
+    }
+    // Se o filtro for boolean true, aplica padrão genérico de -resp.txt
+    elseif ($filter === true && preg_match('/^\d+_\d+_\d+-resp\.txt$/', $basename)) {
+      $return[] = $fullpath;
     }
   }
   return $return;
