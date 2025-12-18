@@ -651,7 +651,7 @@ function nfce_acbr_cmd_exec()
 
 function nfce_read_resps()
 {
-    // Aceita UPLOAD dos XMLs de tcr8_machine
+    // Faz UPLOAD dos XMLs e TXTs de tcr8_machine
     extract($GLOBALS);
     $data = array();
     try {
@@ -683,24 +683,9 @@ function nfce_read_resps()
         $files_arr = array_merge($files_arr, get_files_from_folder($path_cancelamentos));
 
         foreach ($files_arr as $key => $file_path) {
-            // $path_parts = pathinfo($file_path);
-            // $data['processed'][] = array(
-            //     'file' => $path_parts['basename'],
-            //     // 'sat_commands_id' => $_INI['sat_commands_id'],
-            //     // 'sale_id' => $sale_id,
-            //     'retorno' => json_decode(read_last_line($file_path)),
-            // );
-            // $data['txt_OUT_resp'][] = "[$x] File Loaded!";
-
-            // continue;
             if ($key > 15) continue;
-
             $file_data = array();
             $path_parts = pathinfo($file_path);
-            // echo $path_parts['dirname'], "\n";
-            // echo $path_parts['basename'], "\n";
-            // echo $path_parts['filename'], "\n"; // desde o PHP 5.2.0
-            // 'file' => new CURLFile($_FILES['file']['tmp_name'],$_FILES['file']['type'], $_FILES['file']['name']),
             $ext = strtolower($path_parts['extension'] ?? '');
             if (in_array($ext, ['txt', 'xml'])) {
                 $postData['file[' . $file_key . ']'] = curl_file_create(
@@ -713,11 +698,9 @@ function nfce_read_resps()
             } else {
                 $data['Records_invalid'][] = $file_path;
             }
-            // code...
         }
         if (isset($data['Records']) && count($data['Records']) > 0) {
             $ch = curl_init();
-            // curl_setopt($ch, CURLOPT_URL, 'http://localhost/tcr8_sys/actions/nfce.php?action=nfce_xml_upload');
             curl_setopt($ch, CURLOPT_URL, $pc_url_xml_upload);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10); //86400 = 1 Day Timeout
@@ -744,9 +727,9 @@ function nfce_read_resps()
                 }
             }
             curl_close($ch);
-            $data['message'] = 'Upload feito com sucesso';
+            $data['message'] = 'Todos uploads feito com sucesso';
         } else {
-            $data['message'] = 'Não tem upload para fazer';
+            $data['message'] = 'Sem upload elegíveis';
         }
 
         $data['success'] = true;
