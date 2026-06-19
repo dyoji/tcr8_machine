@@ -16,7 +16,7 @@ mb_internal_encoding("utf-8"); //IMPORTANTE PARA O ESPAÇAMENTO CORRETO
 $_env_path = __DIR__ . '/.env';
 if (file_exists($_env_path)) {
     foreach (file($_env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $_env_line) {
-        if (str_starts_with(trim($_env_line), '#')) continue;
+        if (strpos(trim($_env_line), '#') === 0) continue;
         [$_env_key, $_env_val] = array_map('trim', explode('=', $_env_line, 2));
         if (!empty($_env_key)) putenv("$_env_key=$_env_val");
     }
