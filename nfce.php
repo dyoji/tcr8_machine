@@ -242,6 +242,7 @@ function upload_xmls()
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Machine-Token: ' . MACHINE_TOKEN]);
 
             $response = curl_exec($ch);
 
@@ -715,6 +716,7 @@ function nfce_read_resps()
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_REFERER, $_SERVER['HTTP_HOST']);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Machine-Token: ' . MACHINE_TOKEN]);
 
             $data['teste'][] = $response = curl_exec($ch);
             if (curl_errno($ch)) {

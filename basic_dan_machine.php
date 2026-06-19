@@ -12,6 +12,17 @@ setlocale(LC_ALL, 'pt_BR.utf-8', 'pt_BR.utf-8');
 date_default_timezone_set("Brazil/East");
 mb_internal_encoding("utf-8"); //IMPORTANTE PARA O ESPAÇAMENTO CORRETO
 
+// Carrega .env da raiz do tcr8_machine
+$_env_path = __DIR__ . '/.env';
+if (file_exists($_env_path)) {
+    foreach (file($_env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $_env_line) {
+        if (str_starts_with(trim($_env_line), '#')) continue;
+        [$_env_key, $_env_val] = array_map('trim', explode('=', $_env_line, 2));
+        if (!empty($_env_key)) putenv("$_env_key=$_env_val");
+    }
+}
+define('MACHINE_TOKEN', getenv('MACHINE_TOKEN') ?: '');
+
 function tcr8_type($action = false)
 {
   if (isset($_POST['$_tCr8']) && !empty($_POST['$_tCr8'])) {
